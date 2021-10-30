@@ -12,6 +12,9 @@ if (typeof require === 'undefined') require = importModule;
 const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
+let WIDGET_VERSION = 'v1.5';
+let WIDGET_FONT = 'AppleSDGothicNeo';
+
 class Widget extends Base {
     MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
     MY_BMW_TOKEN = 'MY_BMW_TOKEN';
@@ -70,11 +73,11 @@ class Widget extends Base {
         a.title = 'My BMW';
         a.message = '配置My BMW账号密码';
         a.addTextField('账号86+您的电话', this.defaultData.username);
-        a.addSecureTextField('密码（区分大小写不要有特殊字符）', this.defaultData.password);
+        a.addSecureTextField('密码（不要有特殊字符）', this.defaultData.password);
         a.addTextField('自定义车名', this.defaultData.custom_name);
-        a.addTextField('自定义车辆图', this.defaultData.custom_car_image);
-        a.addTextField('自定义车辆图', this.defaultData.custom_logo_image);
-        a.addTextField('车架号(多辆bmw时填写)', this.defaultData.vin);
+        a.addTextField('自定义车辆图片（URL）', this.defaultData.custom_car_image);
+        a.addTextField('自定义LOGO（URL）', this.defaultData.custom_logo_image);
+        a.addTextField('车架号(多辆BMW时填写)', this.defaultData.vin);
         a.addAction('确定');
         a.addCancelAction('取消');
         const id = await a.presentAlert();
@@ -83,8 +86,8 @@ class Widget extends Base {
         this.defaultData.password = a.textFieldValue(1);
         this.defaultData.custom_name = a.textFieldValue(2);
         this.defaultData.custom_car_image = a.textFieldValue(3);
-        this.defaultData.custom_logo_image = a.textFieldValue(3);
-        this.defaultData.vin = a.textFieldValue(4);
+        this.defaultData.custom_logo_image = a.textFieldValue(4);
+        this.defaultData.vin = a.textFieldValue(5);
 
         // 保存到本地
         this.settings[this.en] = this.defaultData;
@@ -170,42 +173,42 @@ class Widget extends Base {
 
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
-        w.setPadding(2, 2, 2, 2);
+        w.setPadding(0, 0, 0, 0);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
 
         const topBox = w.addStack();
         // 横向布局
         topBox.layoutHorizontally();
-        topBox.setPadding(0, 2, 0, 0);
+        topBox.setPadding(6, 12, 0, 12);
+        topBox.size = new Size(width, 0);
 
         const topLeftBox = topBox.addStack();
-        topLeftBox.size = new Size(width * 0.6, 0);
-        
+
         const remainKmBox = topLeftBox.addStack();
-        remainKmBox.setPadding(6, 0, 0, 0);
+        remainKmBox.size = new Size(width * 0.6, 0);
+
         remainKmBox.layoutHorizontally();
         remainKmBox.topAlignContent();
 
-        const remainKmTxt = remainKmBox.addText(rangeValue);
-        remainKmTxt.font = this.provideFont('SanFrancisco-Bold', 14);
+        const remainKmTxt = remainKmBox.addText(`${rangeValue} ${rangeUnits}`);
+        remainKmTxt.font = this.provideFont(`${WIDGET_FONT}-Bold`, 14);
         remainKmTxt.textColor = fontColor;
-        const unitBox = remainKmBox.addStack();
-        unitBox.setPadding(0, 2, 0, 2);
-        const remainKmUnitTxt = unitBox.addText(`${rangeUnits}/${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.provideFont('SanFrancisco', 11);
+        const levelContainer = remainKmBox.addStack();
+        levelContainer.setPadding(0, 2, 0, 2);
+        const remainKmUnitTxt = levelContainer.addText(`/${levelValue}${levelUnits}`);
+        remainKmUnitTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 12);
         remainKmUnitTxt.textColor = fontColor;
         remainKmUnitTxt.textOpacity = 0.7;
 
         const topRightBox = topBox.addStack();
-        topRightBox.layoutHorizontally();
+        topRightBox.layoutVertically();
         topRightBox.size = new Size(width * 0.35, 0);
 
         try {
             const logoContainer = topRightBox.addStack();
-            logoContainer.setPadding(6, 0, 0, 6);
+            logoContainer.setPadding(0, 0, 0, 0);
 
             let logoImage = logoContainer.addImage(await this.getAppLogo());
-
             logoImage.rightAlignImage();
 
             if (!this.defaultData.custom_logo_image) {
@@ -213,20 +216,35 @@ class Widget extends Base {
             }
         } catch (e) {}
 
-        w.addSpacer(10);
+        const versionContainer = topRightBox.addStack();
+        versionContainer.layoutHorizontally();
+        versionContainer.addSpacer();
+        versionContainer.setPadding(0, 0, 0, 6);
 
-        const carNameBox = w.addStack();
-        carNameBox.setPadding(0, 12, 0, 0);
+        let versionText = versionContainer.addText(WIDGET_VERSION);
+        versionText.rightAlignText();
+
+        versionText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 8);
+        versionText.textColor = fontColor;
+        versionText.textOpacity = 0.5;
+
+        const carInfoContainer = w.addStack();
+        carInfoContainer.layoutVertically();
+        carInfoContainer.setPadding(6, 12, 0, 0);
+
+        const carNameBox = carInfoContainer.addStack();
+        carNameBox.setPadding(0, 0, 0, 0);
+
         let carName = `${data.bodyType} ${data.model}`;
         if (this.defaultData.custom_name.length > 0) {
             carName = this.defaultData.custom_name;
         }
         const carNameTxt = carNameBox.addText(carName);
-        carNameTxt.font = this.provideFont('SanFrancisco-Bold', 16);
+        carNameTxt.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
         carNameTxt.textColor = fontColor;
 
-        const carStatusContainer = w.addStack();
-        carStatusContainer.setPadding(2, 12, 0, 0);
+        const carStatusContainer = carInfoContainer.addStack();
+        carStatusContainer.setPadding(2, 0, 0, 0);
 
         const carStatusBox = carStatusContainer.addStack();
         carStatusBox.setPadding(3, 3, 3, 3);
@@ -235,14 +253,14 @@ class Widget extends Base {
         carStatusBox.cornerRadius = 4;
         carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.8), new Color('#2c2c2c', 0.8));
         const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-        carStatusTxt.font = this.provideFont('SanFrancisco', 10);
+        carStatusTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         carStatusTxt.textColor = fontColor;
         carStatusTxt.textOpacity = 0.7;
         carStatusBox.addSpacer(5);
         const updateTxt = carStatusBox.addText(
             `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
         );
-        updateTxt.font = this.provideFont('SanFrancisco', 10);
+        updateTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         updateTxt.textColor = fontColor;
         updateTxt.textOpacity = 0.5;
 
@@ -257,6 +275,7 @@ class Widget extends Base {
         try {
             let imageCar = await this.getCarImage(data);
             let carImage = carImageBox.addImage(imageCar);
+            carImage.rightAlignImage();
         } catch (e) {}
 
         w.addSpacer();
@@ -290,7 +309,7 @@ class Widget extends Base {
         const carNameDom = leftBox.addStack();
         carNameDom.setPadding(8, 16, 0, 0);
         const carName = carNameDom.addText(data.brand + ' ' + data.model);
-        carName.font = this.provideFont('SanFrancisco-Bold', 16);
+        carName.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
         carName.textColor = fontColor;
         carNameDom.addSpacer();
 
@@ -298,14 +317,15 @@ class Widget extends Base {
         kmBox.setPadding(16, 16, 0, 0);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
         const kmText = kmBox.addText(`${rangeValue + ' ' + rangeUnits}`);
-        kmText.font = this.provideFont('SanFrancisco-Bold', 16);
+        kmText.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
         kmText.textColor = fontColor;
-        const unitBox = kmBox.addStack();
-        unitBox.setPadding(4, 4, 0, 0);
-        const remainKmUnitTxt = unitBox.addText(`${rangeUnits}/${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.provideFont('SanFrancisco', 12);
-        remainKmUnitTxt.textColor = fontColor;
-        remainKmUnitTxt.textOpacity = 0.7;
+
+        const levelContainer = kmBox.addStack();
+        levelContainer.setPadding(4, 4, 0, 0);
+        const levelText = levelContainer.addText(`/${levelValue}${levelUnits}`);
+        levelText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 12);
+        levelText.textColor = fontColor;
+        levelText.textOpacity = 0.7;
         kmBox.addSpacer();
 
         const carStatusContainer = leftBox.addStack();
@@ -318,14 +338,14 @@ class Widget extends Base {
         carStatusBox.cornerRadius = 4;
         carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.8), new Color('#2c2c2c', 0.8));
         const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-        carStatusTxt.font = this.provideFont('SanFrancisco', 10);
+        carStatusTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         carStatusTxt.textColor = fontColor;
         carStatusTxt.textOpacity = 0.7;
         carStatusBox.addSpacer(5);
         const updateTxt = carStatusBox.addText(
             `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
         );
-        updateTxt.font = this.provideFont('SanFrancisco', 10);
+        updateTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         updateTxt.textColor = fontColor;
         updateTxt.textOpacity = 0.5;
 
@@ -338,18 +358,18 @@ class Widget extends Base {
         locationContainer.setPadding(16, 16, 0, 0);
 
         const locationText = locationContainer.addText(locationStr);
-        locationText.font = this.provideFont('SanFrancisco', 10);
+        locationText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         locationText.textColor = fontColor;
         locationText.textOpacity = 0.5;
 
         leftBox.addSpacer();
 
         const rightBox = bodyBox.addStack();
+        rightBox.setPadding(8, 0, 0, 8);
         rightBox.layoutVertically();
         rightBox.size = new Size(width * 0.5, height);
 
         const logoImageContainer = rightBox.addStack();
-        logoImageContainer.setPadding(8, 0, 0, 8);
         logoImageContainer.addSpacer();
 
         try {
@@ -360,7 +380,16 @@ class Widget extends Base {
             }
         } catch (e) {}
 
-        rightBox.addSpacer();
+        const versionContainer = rightBox.addStack();
+        versionContainer.layoutHorizontally();
+        versionContainer.addSpacer();
+
+        let versionText = versionContainer.addText(WIDGET_VERSION);
+        versionText.rightAlignText();
+
+        versionText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 8);
+
+        // rightBox.addSpacer();
 
         const carImageContainer = rightBox.addStack();
         carImageContainer.setPadding(8, 0, 0, 8);
@@ -394,7 +423,11 @@ class Widget extends Base {
         if (accessToken === '') {
             return null;
         }
-        await this.checkInDaily(accessToken);
+
+        try {
+            await this.checkInDaily(accessToken);
+        } catch (e) {}
+
         const data = await this.getVIN(accessToken);
         return data;
     }
@@ -432,7 +465,7 @@ class Widget extends Base {
         if (Keychain.contains(this.MY_BMW_UPDATE_AT)) {
             let lastUpdate = parseInt(Keychain.get(this.MY_BMW_UPDATE_AT));
             console.log(this.timeFormat('yyyy-MM-dd HH:mm:ss', lastUpdate));
-            if (lastUpdate > new Date().valueOf() - 1000 * 60 * 51) {
+            if (lastUpdate > new Date().valueOf() - 1000 * 60 * 55) {
                 console.warn('[-] token有效 暂定55分钟');
                 if (Keychain.contains(this.MY_BMW_TOKEN)) {
                     accessToken = Keychain.get(this.MY_BMW_TOKEN);
@@ -478,7 +511,7 @@ class Widget extends Base {
         req.method = 'POST';
         req.body = `grant_type=refresh_token&refresh_token=${refresh_token}`;
         const res = await req.loadJSON();
-        console.log(res);
+
         if (res.access_token !== undefined) {
             const {access_token, refresh_token} = res;
             Keychain.set(this.MY_BMW_UPDATE_AT, String(new Date().valueOf()));

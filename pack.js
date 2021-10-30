@@ -17,8 +17,7 @@ if (process.argv.length !== 3) {
 
 const SAVE_PATH = path.join(__dirname, "Dist")
 const file_name = process.argv[2]
-// const out_name = file_name.replace("「源码」", "「小件件」").replace("Scripts", "Dist");
-const out_name = 'Dist/zpower-bmw-linker.js';
+const out_name = file_name.replace("「源码」", "「小件件」").replace("Scripts", "Dist");
 
 // 创建目录
 if (!fs.existsSync(SAVE_PATH)) {
