@@ -99,6 +99,7 @@ class Widget extends Base {
      * 可以根据 this.widgetFamily 来判断小组件尺寸，以返回不同大小的内容
      */
     async render() {
+        await this.renderError('载入中...');
         if (this.defaultData.username === '') {
             console.error('尚未配置用户');
             return await this.renderError('请先配置用户');
@@ -149,12 +150,6 @@ class Widget extends Base {
 
     /**
      * 渲染小尺寸组件
-     * 按照规范 边距 8pt，155*155
-     * 顶部 一行，两列，包括 车型名称和logo，logo在右上角（苹果小组件规范，logo必须在右上角）
-     * 中间 一行，一列，放置对应的车辆图片
-     * 状态 一行，一列，车辆状态 是否锁定/门窗未锁定等
-     * 燃油 一行，一列，剩余里程，剩余油量百分比
-     * 更新时间 一行
      */
 
     getBack() {
@@ -173,40 +168,41 @@ class Widget extends Base {
 
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
-        w.setPadding(0, 0, 0, 0);
+
+        w.setPadding(0, 0, 0, 2);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
 
+        // 第一行右边车辆名称 左边logo
         const topBox = w.addStack();
-        // 横向布局
         topBox.layoutHorizontally();
-        topBox.setPadding(6, 12, 0, 12);
-        topBox.size = new Size(width, 0);
+        topBox.setPadding(6, 12, 0, 0);
 
+        // ---顶部左边部件---
         const topLeftBox = topBox.addStack();
+        const carNameBox = topLeftBox.addStack();
 
-        const remainKmBox = topLeftBox.addStack();
-        remainKmBox.size = new Size(width * 0.6, 0);
+        carNameBox.setPadding(0, 0, 0, 0);
 
-        remainKmBox.layoutHorizontally();
-        remainKmBox.topAlignContent();
+        let carName = `${data.bodyType} ${data.model}`;
+        if (this.defaultData.custom_name.length > 0) {
+            carName = this.defaultData.custom_name;
+        }
+        const carNameTxt = carNameBox.addText(carName);
+        carNameTxt.leftAlignText();
+        carNameTxt.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
+        carNameTxt.textColor = fontColor;
+        // ---顶部左边部件完---
 
-        const remainKmTxt = remainKmBox.addText(`${rangeValue} ${rangeUnits}`);
-        remainKmTxt.font = this.provideFont(`${WIDGET_FONT}-Bold`, 14);
-        remainKmTxt.textColor = fontColor;
-        const levelContainer = remainKmBox.addStack();
-        levelContainer.setPadding(0, 2, 0, 2);
-        const remainKmUnitTxt = levelContainer.addText(`/${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 12);
-        remainKmUnitTxt.textColor = fontColor;
-        remainKmUnitTxt.textOpacity = 0.7;
+        topBox.addSpacer();
 
+        // ---顶部右边部件---
         const topRightBox = topBox.addStack();
         topRightBox.layoutVertically();
         topRightBox.size = new Size(width * 0.35, 0);
 
         try {
             const logoContainer = topRightBox.addStack();
-            logoContainer.setPadding(0, 0, 0, 0);
+            logoContainer.setPadding(0, 0, 0, 6);
 
             let logoImage = logoContainer.addImage(await this.getAppLogo());
             logoImage.rightAlignImage();
@@ -215,33 +211,38 @@ class Widget extends Base {
                 logoImage.tintColor = fontColor;
             }
         } catch (e) {}
+        // ---顶部右边部件完---
 
-        const versionContainer = topRightBox.addStack();
-        versionContainer.layoutHorizontally();
-        versionContainer.addSpacer();
-        versionContainer.setPadding(0, 0, 0, 6);
+        // const versionContainer = topRightBox.addStack();
+        // versionContainer.layoutHorizontally();
+        // versionContainer.addSpacer();
+        // versionContainer.setPadding(0, 0, 0, 6);
 
-        let versionText = versionContainer.addText(WIDGET_VERSION);
-        versionText.rightAlignText();
+        // let versionText = versionContainer.addText(WIDGET_VERSION);
+        // versionText.rightAlignText();
 
-        versionText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 8);
-        versionText.textColor = fontColor;
-        versionText.textOpacity = 0.5;
+        // versionText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 8);
+        // versionText.textColor = fontColor;
+        // versionText.textOpacity = 0.5;
 
+        // ---中间部件---
         const carInfoContainer = w.addStack();
         carInfoContainer.layoutVertically();
-        carInfoContainer.setPadding(6, 12, 0, 0);
+        carInfoContainer.setPadding(14, 12, 0, 0);
 
-        const carNameBox = carInfoContainer.addStack();
-        carNameBox.setPadding(0, 0, 0, 0);
+        const remainKmBox = carInfoContainer.addStack();
+        remainKmBox.layoutHorizontally();
+        remainKmBox.topAlignContent();
 
-        let carName = `${data.bodyType} ${data.model}`;
-        if (this.defaultData.custom_name.length > 0) {
-            carName = this.defaultData.custom_name;
-        }
-        const carNameTxt = carNameBox.addText(carName);
-        carNameTxt.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
-        carNameTxt.textColor = fontColor;
+        const remainKmTxt = remainKmBox.addText(`${rangeValue} ${rangeUnits}`);
+        remainKmTxt.font = this.provideFont(`${WIDGET_FONT}-Bold`, 14);
+        remainKmTxt.textColor = fontColor;
+        const levelContainer = remainKmBox.addStack();
+        levelContainer.setPadding(0, 2, 0, 2);
+        const remainKmUnitTxt = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
+        remainKmUnitTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 14);
+        remainKmUnitTxt.textColor = fontColor;
+        remainKmUnitTxt.textOpacity = 0.7;
 
         const carStatusContainer = carInfoContainer.addStack();
         carStatusContainer.setPadding(2, 0, 0, 0);
@@ -263,22 +264,25 @@ class Widget extends Base {
         updateTxt.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         updateTxt.textColor = fontColor;
         updateTxt.textOpacity = 0.5;
+        // ---中间部件完---
 
-        w.addSpacer(10);
+        w.addSpacer();
 
+        // ---底部部件---
         const bottomBox = w.addStack();
-        bottomBox.setPadding(8, 12, 0, 10);
+
+        bottomBox.setPadding(8, 12, 12, 10); // 图片的边距
         bottomBox.addSpacer();
+
         const carImageBox = bottomBox.addStack();
-        carImageBox.setPadding(0, 0, 0, 0);
-        carImageBox.centerAlignContent();
+        carImageBox.bottomAlignContent();
+
         try {
             let imageCar = await this.getCarImage(data);
             let carImage = carImageBox.addImage(imageCar);
             carImage.rightAlignImage();
         } catch (e) {}
-
-        w.addSpacer();
+        // ---底部部件完---
 
         w.url = 'de.bmw.connected.mobile20.cn://'; // BASEURL + encodeURI(SHORTCUTNAME);
 
@@ -287,14 +291,13 @@ class Widget extends Base {
 
     /**
      * 渲染中尺寸组件
-     * 按照规范 边距 8pt，329*155
      */
     async renderMedium(data) {
         let w = new ListWidget();
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
 
-        w.setPadding(0, 0, 0, 0);
+        w.setPadding(0, 0, 0, 2);
         const width = data.size.medium[0];
         const height = data.size.medium[1];
 
@@ -307,14 +310,19 @@ class Widget extends Base {
         leftBox.size = new Size(width * 0.5, height);
 
         const carNameDom = leftBox.addStack();
-        carNameDom.setPadding(8, 16, 0, 0);
-        const carName = carNameDom.addText(data.brand + ' ' + data.model);
-        carName.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
-        carName.textColor = fontColor;
+        carNameDom.setPadding(8, 14, 0, 0);
+
+        let carName = `${data.brand} ${data.model}`;
+        if (this.defaultData.custom_name.length > 0) {
+            carName = this.defaultData.custom_name;
+        }
+        const carNameText = carNameDom.addText(carName);
+        carNameText.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
+        carNameText.textColor = fontColor;
         carNameDom.addSpacer();
 
         const kmBox = leftBox.addStack();
-        kmBox.setPadding(16, 16, 0, 0);
+        kmBox.setPadding(20, 14, 0, 0);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
         const kmText = kmBox.addText(`${rangeValue + ' ' + rangeUnits}`);
         kmText.font = this.provideFont(`${WIDGET_FONT}-Bold`, 16);
@@ -326,10 +334,9 @@ class Widget extends Base {
         levelText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 12);
         levelText.textColor = fontColor;
         levelText.textOpacity = 0.7;
-        kmBox.addSpacer();
 
         const carStatusContainer = leftBox.addStack();
-        carStatusContainer.setPadding(16, 16, 0, 0);
+        carStatusContainer.setPadding(8, 14, 0, 0);
 
         const carStatusBox = carStatusContainer.addStack();
         carStatusBox.setPadding(3, 3, 3, 3);
@@ -350,19 +357,25 @@ class Widget extends Base {
         updateTxt.textOpacity = 0.5;
 
         let locationStr = '';
+        let latLng = '';
         try {
             locationStr = data.properties.vehicleLocation.address.formatted;
+            latLng =
+                data.properties.vehicleLocation.coordinates.longitude +
+                ',' +
+                data.properties.vehicleLocation.coordinates.latitude;
         } catch (e) {}
 
+        leftBox.addSpacer();
+
         const locationContainer = leftBox.addStack();
-        locationContainer.setPadding(16, 16, 0, 0);
+        locationContainer.setPadding(16, 14, 16, 2);
 
         const locationText = locationContainer.addText(locationStr);
         locationText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 10);
         locationText.textColor = fontColor;
         locationText.textOpacity = 0.5;
-
-        leftBox.addSpacer();
+        locationText.url = `http://maps.apple.com/?address=${encodeURI(locationStr)}&ll=${latLng}&t=m`;
 
         const rightBox = bodyBox.addStack();
         rightBox.setPadding(8, 0, 0, 8);
@@ -380,16 +393,13 @@ class Widget extends Base {
             }
         } catch (e) {}
 
-        const versionContainer = rightBox.addStack();
-        versionContainer.layoutHorizontally();
-        versionContainer.addSpacer();
+        // const versionContainer = rightBox.addStack();
+        // versionContainer.layoutHorizontally();
+        // versionContainer.addSpacer();
 
-        let versionText = versionContainer.addText(WIDGET_VERSION);
-        versionText.rightAlignText();
-
-        versionText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 8);
-
-        // rightBox.addSpacer();
+        // let versionText = versionContainer.addText(WIDGET_VERSION);
+        // versionText.rightAlignText();
+        // versionText.font = this.provideFont(`${WIDGET_FONT}-Regular`, 8);
 
         const carImageContainer = rightBox.addStack();
         carImageContainer.setPadding(8, 0, 0, 8);
@@ -399,6 +409,7 @@ class Widget extends Base {
         try {
             let imageCar = await this.getCarImage(data);
             let carImage = carImageContainer.addImage(imageCar);
+            carImage.rightAlignImage();
         } catch (e) {}
 
         rightBox.addSpacer();
