@@ -22,11 +22,36 @@ app.use(
 );
 app.use(bodyParser.json());
 
+const _ip = getIPAdress();
+
 app.get('/', (req, res) => {
     let html = fs.readFileSync(path.join(WORK_DIR, 'guide.html')).toString();
     let js = fs.readFileSync(path.join(WORK_DIR, 'install-runtime.js')).toString();
+
+    js = js.replace('*|IP_ADDRESS|*', `${_ip}:${HTTP_PORT}`);
+
+    // load all files from scripts table
+    let files = fs.readdirSync(SCRIPTS_DIR);
+    let filesStr = '';
+
+    for (const file of files) {
+        filesStr += `'${file}',`;
+    }
+    
+    js = js.replace('*|FILES|*', filesStr);
+
     html = html.replace('@@code@@', js);
+
     res.send(html);
+});
+
+app.get('/Scripts/:fileName', (req, res) => {
+    try {
+        let js = fs.readFileSync(path.join(SCRIPTS_DIR, req.params['fileName'])).toString();
+        res.send(js);
+    } catch (e) {
+        res.send('//访问文件错误');
+    }
 });
 
 app.get('/ping', (req, res) => {
@@ -117,7 +142,6 @@ function getIPAdress() {
     }
 }
 
-const _ip = '192.168.50.107';
 const _host = `http://${_ip}:${HTTP_PORT}`;
 
 console.log('[*] 「小件件」开发服务运行中');

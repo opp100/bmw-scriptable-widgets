@@ -101,8 +101,12 @@ class Widget extends Base {
         if (data === null) {
             return await this.renderError('请确认授权');
         }
-        data.size = this.DeviceSize['375x812'];
-        console.warn(this.DeviceSize['375x812']);
+        try {
+            data.size = this.DeviceSize[`${size.width}x${size.height}`] || this.DeviceSize['375x812'];
+        } catch (e) {
+            console.warn(e);
+            await this.renderError('显示错误：' + e.message);
+        }
         //console.log(JSON.stringify(data))
         switch (this.widgetFamily) {
             case 'large':
@@ -120,6 +124,7 @@ class Widget extends Base {
      return logoImage*/
         try {
             let logoBase64 = `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`;
+            
             let imageData = Data.fromBase64String(logoBase64);
             let imageFromData = Image.fromData(imageData);
             return imageFromData;
@@ -162,18 +167,17 @@ class Widget extends Base {
 
     async renderSmall(data) {
         let w = new ListWidget();
-        const width = data.size.small;
-        const height = data.size.small;
-        let fontColor = Color.dynamic(new Color('#404040'), Color.white());
+
+        let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
         w.setPadding(0, 0, 0, 0);
-        const padding = 16;
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
 
         const topBox = w.addStack();
         // 横向布局
         topBox.layoutHorizontally();
-        topBox.setPadding(12, 12, 4, 12);
+        topBox.setPadding(6, 12, 4, 12);
+
         const topLeftBox = topBox.addStack();
         topLeftBox.setPadding(0, 0, 0, 0);
         topBox.addSpacer();
@@ -182,7 +186,8 @@ class Widget extends Base {
 
         try {
             let logoImage = topRightBox.addImage(await this.getAppLogo());
-            logoImage.imageSize = new Size(32, 32);
+            logoImage.imageSize = new Size(48, 48);
+            logoImage.tintColor = fontColor;
         } catch (e) {}
         const remainKmBox = topLeftBox.addStack();
         remainKmBox.setPadding(0, 0, 0, 0);
@@ -190,12 +195,12 @@ class Widget extends Base {
         remainKmBox.bottomAlignContent();
         //remainKmBox.backgroundColor = Color.red()
         const remainKmTxt = remainKmBox.addText(rangeValue);
-        remainKmTxt.font = this.provideFont('EuphemiaUCAS-Bold', 14);
+        remainKmTxt.font = this.provideFont('SanFrancisco-Bold', 14);
         remainKmTxt.textColor = fontColor;
         const unitBox = remainKmBox.addStack();
         unitBox.setPadding(4, 4, 4, 4);
         const remainKmUnitTxt = unitBox.addText(`${rangeUnits}/${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.provideFont('EuphemiaUCAS', 10);
+        remainKmUnitTxt.font = this.provideFont('SanFrancisco', 10);
         remainKmUnitTxt.textColor = fontColor;
         remainKmUnitTxt.textOpacity = 0.7;
         remainKmBox.addSpacer();
@@ -207,8 +212,9 @@ class Widget extends Base {
             carName = this.defaultData.custom_name;
         }
         const carNameTxt = carNameBox.addText(carName);
-        carNameTxt.font = this.provideFont('EuphemiaUCAS-Bold', 16);
+        carNameTxt.font = this.provideFont('SanFrancisco-Bold', 16);
         carNameTxt.textColor = fontColor;
+
         const parentBox = w.addStack();
         parentBox.setPadding(2, 12, 0, 0);
         const carStatusBox = parentBox.addStack();
@@ -218,18 +224,18 @@ class Widget extends Base {
         carStatusBox.cornerRadius = 4;
         carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.8), new Color('#2c2c2c', 0.8));
         const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-        carStatusTxt.font = this.provideFont('EuphemiaUCAS', 10);
+        carStatusTxt.font = this.provideFont('SanFrancisco', 10);
         carStatusTxt.textColor = fontColor;
         carStatusTxt.textOpacity = 0.7;
         carStatusBox.addSpacer(5);
         const updateTxt = carStatusBox.addText(
             `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
         );
-        updateTxt.font = this.provideFont('EuphemiaUCAS', 10);
+        updateTxt.font = this.provideFont('SanFrancisco', 10);
         updateTxt.textColor = fontColor;
         updateTxt.textOpacity = 0.5;
         const bottomBox = w.addStack();
-        bottomBox.setPadding(8, 12, 0, 0);
+        bottomBox.setPadding(8, 12, 0, 10);
         bottomBox.addSpacer();
         const carImageBox = bottomBox.addStack();
         carImageBox.setPadding(0, 0, 0, 0);
@@ -252,9 +258,9 @@ class Widget extends Base {
      */
     async renderMedium(data) {
         let w = new ListWidget();
-        let darkMode = Device.isUsingDarkAppearance();
-        let fontColor = darkMode ? Color.white() : new Color('#404040');
-        w.backgroundGradient = this.getBack(darkMode);
+        let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
+        w.backgroundGradient = this.getBack();
+
         w.setPadding(0, 0, 0, 0);
         const width = data.size.medium[0];
         const height = data.size.medium[1];
@@ -270,7 +276,7 @@ class Widget extends Base {
         const carNameDom = leftBox.addStack();
         carNameDom.setPadding(8, 16, 0, 0);
         const carName = carNameDom.addText(data.brand + ' ' + data.model);
-        carName.font = this.provideFont('EuphemiaUCAS-Bold', 16);
+        carName.font = this.provideFont('SanFrancisco-Bold', 16);
         carName.textColor = fontColor;
         carNameDom.addSpacer();
 
@@ -278,12 +284,12 @@ class Widget extends Base {
         kmBox.setPadding(16, 16, 0, 0);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
         const kmText = kmBox.addText(`${rangeValue + ' ' + rangeUnits}`);
-        kmText.font = this.provideFont('EuphemiaUCAS-Bold', 16);
+        kmText.font = this.provideFont('SanFrancisco-Bold', 16);
         kmText.textColor = fontColor;
         const unitBox = kmBox.addStack();
         unitBox.setPadding(4, 4, 0, 0);
         const remainKmUnitTxt = unitBox.addText(`${rangeUnits}/${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.provideFont('EuphemiaUCAS', 12);
+        remainKmUnitTxt.font = this.provideFont('SanFrancisco', 12);
         remainKmUnitTxt.textColor = fontColor;
         remainKmUnitTxt.textOpacity = 0.7;
         kmBox.addSpacer();
@@ -298,14 +304,14 @@ class Widget extends Base {
         carStatusBox.cornerRadius = 4;
         carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.8), new Color('#2c2c2c', 0.8));
         const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-        carStatusTxt.font = this.provideFont('EuphemiaUCAS', 10);
+        carStatusTxt.font = this.provideFont('SanFrancisco', 10);
         carStatusTxt.textColor = fontColor;
         carStatusTxt.textOpacity = 0.7;
         carStatusBox.addSpacer(5);
         const updateTxt = carStatusBox.addText(
             `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
         );
-        updateTxt.font = this.provideFont('EuphemiaUCAS', 10);
+        updateTxt.font = this.provideFont('SanFrancisco', 10);
         updateTxt.textColor = fontColor;
         updateTxt.textOpacity = 0.5;
 
@@ -318,7 +324,7 @@ class Widget extends Base {
         locationContainer.setPadding(16, 16, 0, 0);
 
         const locationText = locationContainer.addText(locationStr);
-        locationText.font = this.provideFont('EuphemiaUCAS', 10);
+        locationText.font = this.provideFont('SanFrancisco', 10);
         locationText.textColor = fontColor;
         locationText.textOpacity = 0.5;
 
@@ -332,10 +338,10 @@ class Widget extends Base {
         imageBox.setPadding(8, 0, 0, 8);
         imageBox.layoutHorizontally();
 
-        const levelText = imageBox.addText(`${data.status.doorsGeneralState}`);
-        levelText.font = this.provideFont('regular', 12);
+        // const levelText = imageBox.addText(`${data.status.doorsGeneralState}`);
+        // levelText.font = this.provideFont('regular', 12);
 
-        levelText.textColor = fontColor;
+        // levelText.textColor = fontColor;
         imageBox.addSpacer();
 
         try {
