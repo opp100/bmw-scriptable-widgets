@@ -1,0 +1,20 @@
+{
+  "name": "v2-dev",
+  "version": "1.0.0",
+  "runtime_ver": 20201209,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/scriptable-ios": "^1.6.1",
+    "body-parser": "^1.19.0",
+    "express": "^4.17.1",
+    "javascript-obfuscator": "^2.9.4",
+    "multer": "^1.4.2"
+  }
+}
