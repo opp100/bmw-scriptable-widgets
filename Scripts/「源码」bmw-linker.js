@@ -44,12 +44,14 @@ class Widget extends Base {
     }
 
     defaultData = {
-        username: '', // 手机号码带86
-        password: '', // 密码
+        username: '',
+        password: '',
         custom_name: '',
-        custom_car_image: '',
+        custom_car_image: null,
+        custom_logo_image: null,
         vin: ''
     };
+
     setWidgetUserConfig = async () => {
         const b = new Alert();
         b.title = '警告⚠️';
@@ -71,6 +73,7 @@ class Widget extends Base {
         a.addSecureTextField('密码（区分大小写不要有特殊字符）', this.defaultData.password);
         a.addTextField('自定义车名', this.defaultData.custom_name);
         a.addTextField('自定义车辆图', this.defaultData.custom_car_image);
+        a.addTextField('自定义车辆图', this.defaultData.custom_logo_image);
         a.addTextField('车架号(多辆bmw时填写)', this.defaultData.vin);
         a.addAction('确定');
         a.addCancelAction('取消');
@@ -80,6 +83,7 @@ class Widget extends Base {
         this.defaultData.password = a.textFieldValue(1);
         this.defaultData.custom_name = a.textFieldValue(2);
         this.defaultData.custom_car_image = a.textFieldValue(3);
+        this.defaultData.custom_logo_image = a.textFieldValue(3);
         this.defaultData.vin = a.textFieldValue(4);
 
         // 保存到本地
@@ -119,19 +123,13 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        /*let logoImage = await this.getImageByUrl(
-           'https://z3.ax1x.com/2021/10/25/54cQGd.png')
-     return logoImage*/
-        try {
-            let logoBase64 = `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`;
-            
-            let imageData = Data.fromBase64String(logoBase64);
-            let imageFromData = Image.fromData(imageData);
-            return imageFromData;
-        } catch (e) {
-            console.error(e.message);
-            return null;
+        let logoURL = 'https://s3.bmp.ovh/imgs/2021/10/a687f0e4702c1607.png';
+
+        if (this.defaultData.custom_logo_image) {
+            logoURL = this.defaultData.custom_logo_image;
         }
+
+        return await this.getImageByUrl(logoURL);
     }
 
     async renderError(errMsg) {
@@ -168,42 +166,54 @@ class Widget extends Base {
     async renderSmall(data) {
         let w = new ListWidget();
 
+        const width = data.size.small;
+
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
-        w.setPadding(0, 0, 0, 0);
+        w.setPadding(2, 2, 2, 2);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
 
         const topBox = w.addStack();
         // 横向布局
         topBox.layoutHorizontally();
-        topBox.setPadding(6, 12, 4, 12);
+        topBox.setPadding(0, 2, 0, 0);
 
         const topLeftBox = topBox.addStack();
-        topLeftBox.setPadding(0, 0, 0, 0);
-        topBox.addSpacer();
-        const topRightBox = topBox.addStack();
-        topRightBox.setPadding(0, 0, 0, 0);
-
-        try {
-            let logoImage = topRightBox.addImage(await this.getAppLogo());
-            logoImage.imageSize = new Size(48, 48);
-            logoImage.tintColor = fontColor;
-        } catch (e) {}
+        topLeftBox.size = new Size(width * 0.6, 0);
+        
         const remainKmBox = topLeftBox.addStack();
-        remainKmBox.setPadding(0, 0, 0, 0);
+        remainKmBox.setPadding(6, 0, 0, 0);
         remainKmBox.layoutHorizontally();
-        remainKmBox.bottomAlignContent();
-        //remainKmBox.backgroundColor = Color.red()
+        remainKmBox.topAlignContent();
+
         const remainKmTxt = remainKmBox.addText(rangeValue);
         remainKmTxt.font = this.provideFont('SanFrancisco-Bold', 14);
         remainKmTxt.textColor = fontColor;
         const unitBox = remainKmBox.addStack();
-        unitBox.setPadding(4, 4, 4, 4);
+        unitBox.setPadding(0, 2, 0, 2);
         const remainKmUnitTxt = unitBox.addText(`${rangeUnits}/${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.provideFont('SanFrancisco', 10);
+        remainKmUnitTxt.font = this.provideFont('SanFrancisco', 11);
         remainKmUnitTxt.textColor = fontColor;
         remainKmUnitTxt.textOpacity = 0.7;
-        remainKmBox.addSpacer();
+
+        const topRightBox = topBox.addStack();
+        topRightBox.layoutHorizontally();
+        topRightBox.size = new Size(width * 0.35, 0);
+
+        try {
+            const logoContainer = topRightBox.addStack();
+            logoContainer.setPadding(6, 0, 0, 6);
+
+            let logoImage = logoContainer.addImage(await this.getAppLogo());
+
+            logoImage.rightAlignImage();
+
+            if (!this.defaultData.custom_logo_image) {
+                logoImage.tintColor = fontColor;
+            }
+        } catch (e) {}
+
+        w.addSpacer(10);
 
         const carNameBox = w.addStack();
         carNameBox.setPadding(0, 12, 0, 0);
@@ -215,9 +225,10 @@ class Widget extends Base {
         carNameTxt.font = this.provideFont('SanFrancisco-Bold', 16);
         carNameTxt.textColor = fontColor;
 
-        const parentBox = w.addStack();
-        parentBox.setPadding(2, 12, 0, 0);
-        const carStatusBox = parentBox.addStack();
+        const carStatusContainer = w.addStack();
+        carStatusContainer.setPadding(2, 12, 0, 0);
+
+        const carStatusBox = carStatusContainer.addStack();
         carStatusBox.setPadding(3, 3, 3, 3);
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
@@ -234,6 +245,9 @@ class Widget extends Base {
         updateTxt.font = this.provideFont('SanFrancisco', 10);
         updateTxt.textColor = fontColor;
         updateTxt.textOpacity = 0.5;
+
+        w.addSpacer(10);
+
         const bottomBox = w.addStack();
         bottomBox.setPadding(8, 12, 0, 10);
         bottomBox.addSpacer();
@@ -333,36 +347,31 @@ class Widget extends Base {
         const rightBox = bodyBox.addStack();
         rightBox.layoutVertically();
         rightBox.size = new Size(width * 0.5, height);
-        const imageBox = rightBox.addStack();
-        imageBox.centerAlignContent();
-        imageBox.setPadding(8, 0, 0, 8);
-        imageBox.layoutHorizontally();
 
-        // const levelText = imageBox.addText(`${data.status.doorsGeneralState}`);
-        // levelText.font = this.provideFont('regular', 12);
-
-        // levelText.textColor = fontColor;
-        imageBox.addSpacer();
+        const logoImageContainer = rightBox.addStack();
+        logoImageContainer.setPadding(8, 0, 0, 8);
+        logoImageContainer.addSpacer();
 
         try {
-            let logoImage = imageBox.addImage(await this.getAppLogo());
-            logoImage.imageSize = new Size(64, 64);
+            let logoImage = logoImageContainer.addImage(await this.getAppLogo());
+            logoImage.rightAlignImage();
+            if (!this.defaultData.custom_logo_image) {
+                logoImage.tintColor = fontColor;
+            }
         } catch (e) {}
 
-        const carDom = rightBox.addStack();
-        carDom.setPadding(0, 0, 0, 0);
-        carDom.size = new Size(width * 0.5, height - 38);
-        carDom.addSpacer(50);
+        rightBox.addSpacer();
+
+        const carImageContainer = rightBox.addStack();
+        carImageContainer.setPadding(8, 0, 0, 8);
+        carImageContainer.size = new Size(width * 0.5, height - 38);
+        carImageContainer.bottomAlignContent();
 
         try {
             let imageCar = await this.getCarImage(data);
-            let carImage = carDom.addImage(imageCar);
-            carImage.imageSize = new Size(width * 0.6, height - 38);
+            let carImage = carImageContainer.addImage(imageCar);
         } catch (e) {}
 
-        const lastTimeTxt = rightBox.addText(data.status.timestampMessage);
-        lastTimeTxt.font = this.provideFont('regular', 10);
-        lastTimeTxt.textColor = fontColor;
         rightBox.addSpacer();
 
         w.url = 'de.bmw.connected.mobile20.cn://';
@@ -654,7 +663,7 @@ class Widget extends Base {
     async getCarImage(data) {
         let imageCar = '';
         let carImageUrl = `https://myprofile.bmw.com.cn/eadrax-ics/v3/presentation/vehicles/${data.vin}/images?carView=VehicleStatus`;
-        if (this.defaultData.custom_car_image && this.defaultData.custom_car_image.length > 0) {
+        if (this.defaultData.custom_car_image) {
             imageCar = await this.getImageByUrl(this.defaultData.custom_car_image);
         } else {
             imageCar = await this.getBmwImage(carImageUrl);
