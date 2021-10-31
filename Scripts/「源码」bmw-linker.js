@@ -12,9 +12,13 @@ if (typeof require === 'undefined') require = importModule;
 const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
-let WIDGET_VERSION = 'v1.5';
-let WIDGET_FONT = 'AppleSDGothicNeo';
+let WIDGET_VERSION = 'v1.6';
+let WIDGET_FONT = 'AvenirNext';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
+
+let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
+let DEFAULT_BG_COLOR_DARK = '#2B2B2B';
+
 class Widget extends Base {
     MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
     MY_BMW_TOKEN = 'MY_BMW_TOKEN';
@@ -168,7 +172,7 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        let logoURL = 'https://s3.bmp.ovh/imgs/2021/10/a687f0e4702c1607.png';
+        let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
 
         if (this.defaultData.custom_logo_image) {
             logoURL = this.defaultData.custom_logo_image;
@@ -195,20 +199,23 @@ class Widget extends Base {
 
     getBack() {
         const bgColor = new LinearGradient();
-        let startColor = Color.dynamic(Color.white(), new Color('#1c1c1c'));
-        let endColor = Color.dynamic(Color.white(), new Color('#1c1c1c'));
-        bgColor.colors = [startColor, endColor];
-        bgColor.locations = [0.0, 1.0];
+
+        bgColor.colors = [
+            Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1)),
+            Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1))
+        ];
+
+        bgColor.locations = [0, 1];
+
         return bgColor;
     }
 
     async renderSmall(data) {
         let w = new ListWidget();
-
-        const width = data.size['small']['width'];
-
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
+
+        const width = data.size['small']['width'];
 
         w.setPadding(0, 0, 0, 2);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
@@ -228,17 +235,16 @@ class Widget extends Base {
         if (this.defaultData.custom_name.length > 0) {
             carName = this.defaultData.custom_name;
         }
-        const carNameTxt = carNameBox.addText(carName);
-        carNameTxt.leftAlignText();
-        carNameTxt.font = this.getFont(`${WIDGET_FONT}-Bold`, 16);
-        carNameTxt.textColor = fontColor;
+        const carNameText = carNameBox.addText(carName);
+        carNameText.leftAlignText();
+        carNameText.font = this.getFont(`${WIDGET_FONT}-DemiBold`, 14);
+        carNameText.textColor = fontColor;
         // ---顶部左边部件完---
 
         topBox.addSpacer();
 
         // ---顶部右边部件---
         const topRightBox = topBox.addStack();
-        topRightBox.layoutVertically();
         topRightBox.size = new Size(width * 0.35, 0);
 
         try {
@@ -254,18 +260,6 @@ class Widget extends Base {
         } catch (e) {}
         // ---顶部右边部件完---
 
-        // const versionContainer = topRightBox.addStack();
-        // versionContainer.layoutHorizontally();
-        // versionContainer.addSpacer();
-        // versionContainer.setPadding(0, 0, 0, 6);
-
-        // let versionText = versionContainer.addText(WIDGET_VERSION);
-        // versionText.rightAlignText();
-
-        // versionText.font = this.getFont(`${WIDGET_FONT}-Regular`, 8);
-        // versionText.textColor = fontColor;
-        // versionText.textOpacity = 0.5;
-
         // ---中间部件---
         const carInfoContainer = w.addStack();
         carInfoContainer.layoutVertically();
@@ -273,17 +267,17 @@ class Widget extends Base {
 
         const kmContainer = carInfoContainer.addStack();
         kmContainer.layoutHorizontally();
-        kmContainer.topAlignContent();
+        kmContainer.bottomAlignContent();
 
         const remainKmTxt = kmContainer.addText(`${rangeValue} ${rangeUnits}`);
         remainKmTxt.font = this.getFont(`${WIDGET_FONT}-Bold`, 14);
         remainKmTxt.textColor = fontColor;
         const levelContainer = kmContainer.addStack();
         levelContainer.setPadding(0, 2, 0, 2);
-        const remainKmUnitTxt = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
-        remainKmUnitTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 14);
-        remainKmUnitTxt.textColor = fontColor;
-        remainKmUnitTxt.textOpacity = 0.7;
+        const levelText = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
+        levelText.font = this.getFont(`${WIDGET_FONT}-Regular`, 13);
+        levelText.textColor = fontColor;
+        levelText.textOpacity = 0.7;
 
         const carStatusContainer = carInfoContainer.addStack();
         carStatusContainer.setPadding(2, 0, 0, 0);
@@ -358,23 +352,35 @@ class Widget extends Base {
             carName = this.defaultData.custom_name;
         }
         const carNameText = carNameContainer.addText(carName);
-        carNameText.font = this.getFont(`${WIDGET_FONT}-Bold`, 16);
+        carNameText.font = this.getFont(`${WIDGET_FONT}-DemiBold`, 20);
         carNameText.textColor = fontColor;
         carNameContainer.addSpacer();
 
         const kmContainer = leftContainer.addStack();
         kmContainer.setPadding(20, 14, 0, 0);
+        kmContainer.bottomAlignContent();
+
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
         const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
         kmText.font = this.getFont(`${WIDGET_FONT}-Bold`, 16);
         kmText.textColor = fontColor;
 
         const levelContainer = kmContainer.addStack();
-        levelContainer.setPadding(4, 4, 0, 0);
+        levelContainer.setPadding(0, 4, 0, 0);
         const levelText = levelContainer.addText(`/${levelValue}${levelUnits}`);
-        levelText.font = this.getFont(`${WIDGET_FONT}-Regular`, 12);
+        levelText.font = this.getFont(`${WIDGET_FONT}-Regular`, 14);
         levelText.textColor = fontColor;
         levelText.textOpacity = 0.7;
+
+        const mileageContainer = leftContainer.addStack();
+        mileageContainer.setPadding(0, 14, 0, 0);
+
+        let mileageText = mileageContainer.addText(
+            `总里程: ${data.status.currentMileage.mileage} ${data.status.currentMileage.units}`
+        );
+        mileageText.font = this.getFont(`${WIDGET_FONT}-Regular`, 9);
+        mileageText.textColor = fontColor;
+        mileageText.textOpacity = 0.7;
 
         const carStatusContainer = leftContainer.addStack();
         carStatusContainer.setPadding(8, 14, 0, 0);
@@ -398,32 +404,32 @@ class Widget extends Base {
         updateTxt.textOpacity = 0.5;
 
         let locationStr = '';
-        let latLng = '';
         try {
             locationStr = data.properties.vehicleLocation.address.formatted;
-            latLng =
-                data.properties.vehicleLocation.coordinates.longitude +
-                ',' +
-                data.properties.vehicleLocation.coordinates.latitude;
         } catch (e) {}
 
         leftContainer.addSpacer();
 
         const locationContainer = leftContainer.addStack();
-        locationContainer.setPadding(16, 14, 16, 2);
+        locationContainer.setPadding(0, 14, 8, 2);
 
         const locationText = locationContainer.addText(locationStr);
         locationText.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
         locationText.textColor = fontColor;
         locationText.textOpacity = 0.5;
-        locationText.url = `http://maps.apple.com/?address=${encodeURI(locationStr)}&ll=${latLng}&t=m`;
+        locationText.url = this.buildMapURL(data);
 
         const rightContainer = bodyContainer.addStack();
         rightContainer.setPadding(8, 0, 0, 8);
         rightContainer.layoutVertically();
-        rightContainer.size = new Size(width * 0.5, height);
+        rightContainer.size = new Size(Math.ceil(width * 0.5), height);
 
         const logoImageContainer = rightContainer.addStack();
+        logoImageContainer.size = new Size(0, Math.ceil(height * 0.1));
+        logoImageContainer.layoutHorizontally();
+
+        logoImageContainer.setPadding(0, 8, 4, 0);
+
         logoImageContainer.addSpacer();
 
         try {
@@ -434,17 +440,12 @@ class Widget extends Base {
             }
         } catch (e) {}
 
-        // const versionContainer = rightContainer.addStack();
-        // versionContainer.layoutHorizontally();
-        // versionContainer.addSpacer();
-
-        // let versionText = versionContainer.addText(WIDGET_VERSION);
-        // versionText.rightAlignText();
-        // versionText.font = this.getFont(`${WIDGET_FONT}-Regular`, 8);
+        rightContainer.addSpacer();
 
         const carImageContainer = rightContainer.addStack();
-        carImageContainer.setPadding(8, 0, 0, 8);
-        carImageContainer.size = new Size(width * 0.5, height - 38);
+        carImageContainer.setPadding(0, 0, 0, 8);
+        carImageContainer.size = new Size(Math.ceil(width * 0.5), Math.ceil(height * 0.45));
+
         carImageContainer.bottomAlignContent();
 
         try {
@@ -453,7 +454,21 @@ class Widget extends Base {
             carImage.rightAlignImage();
         } catch (e) {}
 
-        rightContainer.addSpacer();
+        if (data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
+            let windowStatusContainer = rightContainer.addStack();
+            windowStatusContainer.setPadding(0, 0, 8, 0);
+
+            windowStatusContainer.layoutHorizontally();
+            windowStatusContainer.addSpacer();
+
+            let windowStatus = `${data.status.doorsAndWindows[0].title} ${data.status.doorsAndWindows[0].state} `;
+            let windowStatusText = windowStatusContainer.addText(windowStatus);
+            windowStatusText.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
+            windowStatusText.textColor = fontColor;
+            windowStatusText.textOpacity = 0.5;
+
+            windowStatusContainer.addSpacer();
+        }
 
         w.url = 'de.bmw.connected.mobile20.cn://';
 
@@ -472,6 +487,11 @@ class Widget extends Base {
         let largeExtraContainer = w.addStack();
         largeExtraContainer.bottomAlignContent();
 
+        let mapWidth = Math.ceil(width);
+        let mapHeight = Math.ceil(height * 0.5);
+
+        largeExtraContainer.size = new Size(mapWidth, mapHeight);
+
         let latLng = null;
         try {
             latLng =
@@ -480,34 +500,35 @@ class Widget extends Base {
                 data.properties.vehicleLocation.coordinates.latitude;
         } catch (e) {}
 
-        let mapImage = await this.loadMapView(latLng, width, height * 0.5);
-        let carImage = largeExtraContainer.addImage(mapImage);
-        carImage.centerAlignImage();
+        let mapImage = await this.loadMapView(latLng, mapWidth, mapHeight);
+        largeExtraContainer.addImage(mapImage);
+        largeExtraContainer.url = this.buildMapURL(data);
 
         return w;
     }
 
     async loadMapView(latLng, width, height, useCache = true) {
-        if (this.defaultData.map_api_key) {
-            return false;
-        }
-
-        let mapApiKey = this.defaultData.map_api_key;
-
-        width = parseInt(width);
-        height = parseInt(height);
-
-        let url = `https://restapi.amap.com/v3/staticmap?location=${latLng}&zoom=14&size=${width}*${height}&markers=mid,,:${latLng}&key=${mapApiKey}`;
-
-        const cacheKey = this.md5(url);
-        const cacheFile = FileManager.local().joinPath(FileManager.local().temporaryDirectory(), cacheKey);
-
-        if (useCache && FileManager.local().fileExists(cacheFile)) {
-            console.log('load map from cache');
-            return Image.fromFile(cacheFile);
-        }
-
         try {
+            if (!this.defaultData.map_api_key) {
+                throw '获取地图失败，请检查API KEY';
+            }
+
+            width = parseInt(width);
+            height = parseInt(height);
+
+            let mapApiKey = this.defaultData.map_api_key;
+
+            let url = `https://restapi.amap.com/v3/staticmap?location=${latLng}&scale=2&zoom=15&size=${width}*${height}&markers=large,0x00CCFF,:${latLng}&key=${mapApiKey}`;
+
+            console.warn('load map from URL: ' + url);
+            const cacheKey = this.md5(url);
+            const cacheFile = FileManager.local().joinPath(FileManager.local().temporaryDirectory(), cacheKey);
+
+            if (useCache && FileManager.local().fileExists(cacheFile)) {
+                console.log('load map from cache');
+                return Image.fromFile(cacheFile);
+            }
+
             console.log('load map from API');
 
             let req = new Request(url);
@@ -522,16 +543,33 @@ class Widget extends Base {
             return img;
         } catch (e) {
             console.log('load map failed');
-            console.error(e);
+            console.error(e.message);
             let ctx = new DrawContext();
             ctx.size = new Size(width, height);
 
-            ctx.setFillColor(Color.dynamic(Color.white(), new Color('#2B2B2B')));
+            ctx.setFillColor(new Color('#eee'));
             ctx.fillRect(new Rect(0, 0, width, height));
-            ctx.drawTextInRect('地图获取失败', new Rect(20, 20, width, height));
+            ctx.drawTextInRect(e.message || '获取地图失败', new Rect(20, 20, width, height));
 
             return await ctx.getImage();
         }
+    }
+
+    buildMapURL(data) {
+        let locationStr = '';
+        let latLng = '';
+
+        try {
+            locationStr = data.properties.vehicleLocation.address.formatted;
+            latLng =
+                data.properties.vehicleLocation.coordinates.longitude +
+                ',' +
+                data.properties.vehicleLocation.coordinates.latitude;
+        } catch (e) {
+            return '';
+        }
+
+        return `http://maps.apple.com/?address=${encodeURI(locationStr)}&ll=${latLng}&t=m`;
     }
 
     /**
@@ -583,7 +621,7 @@ class Widget extends Base {
         if (Keychain.contains(this.MY_BMW_UPDATE_AT)) {
             let lastUpdate = parseInt(Keychain.get(this.MY_BMW_UPDATE_AT));
 
-            if (lastUpdate > new Date().valueOf() - 1000 * 60 * 60) {
+            if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
                 if (Keychain.contains(this.MY_BMW_TOKEN)) {
                     accessToken = Keychain.get(this.MY_BMW_TOKEN);
                 }
@@ -595,6 +633,7 @@ class Widget extends Base {
                 }
             }
         }
+
         if (!accessToken || accessToken == '') {
             console.log('No token found, get again');
             const loginRes = await this.myLogin();
@@ -696,6 +735,7 @@ class Widget extends Base {
         let req = new Request(
             `https://myprofile.bmw.com.cn/eadrax-vcs/v1/vehicles?apptimezone=480&appDateTime=${new Date().valueOf()}`
         );
+
         req.headers = {
             'user-agent': 'Dart/2.10 (dart:io)',
             'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
@@ -705,10 +745,12 @@ class Widget extends Base {
             'x-cluster-use-mock': 'never',
             '24-hour-format': 'true'
         };
+
         const res = await req.loadJSON();
         let vin = this.defaultData.vin;
+
         if (res instanceof Array) {
-            console.log('Get vehicle detail success');
+            console.log('Get vehicle details success');
             if (vin && vin.length > 0) {
                 let vinLow = vin.toLowerCase();
                 let findVin = res.filter((p) => p.vin.toLowerCase() === vinLow);
@@ -727,7 +769,6 @@ class Widget extends Base {
 
     async checkInDaily(access_token) {
         let today = this.timeFormat('yyyyMMdd');
-        console.log(today);
 
         let hasCheckIn = false;
 
