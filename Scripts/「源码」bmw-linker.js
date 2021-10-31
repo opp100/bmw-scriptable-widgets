@@ -19,11 +19,18 @@ let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
 let DEFAULT_BG_COLOR_DARK = '#2B2B2B';
 
+// header is might be used for preventing the bmw block the external api?
+let BMW_HEADERS = {
+    'user-agent': 'Dart/2.10 (dart:io)',
+    'x-user-agent': 'ios(15.0.2);bmw;1.6.6(10038)',
+    host: 'myprofile.bmw.com.cn'
+};
 class Widget extends Base {
+    // setup local storage keys
     MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
     MY_BMW_TOKEN = 'MY_BMW_TOKEN';
-    MY_BMW_UPDATE_AT = 'MY_BMW_UPDATE_AT';
-    MY_BMW_CHECK_IN_AT = 'MY_BMW_CHECK_IN_AT';
+    MY_BMW_UPDATE_LAST_AT = 'MY_BMW_UPDATE_LAST_AT';
+    MY_BMW_LAST_CHECK_IN = 'MY_BMW_LAST_CHECK_IN';
     MY_BMW_AGREE = 'MY_BMW_AGREE';
 
     DeviceSize = {
@@ -64,6 +71,16 @@ class Widget extends Base {
         }
     };
 
+    defaultData = {
+        username: '',
+        password: '',
+        custom_name: '',
+        custom_vehicle_image: null,
+        custom_logo_image: null,
+        vin: '',
+        map_api_key: null
+    };
+
     constructor(arg) {
         super(arg);
         this.name = 'My BMW';
@@ -71,22 +88,13 @@ class Widget extends Base {
         this.configKeyName = 'UserConfig';
 
         this.defaultData = {...this.defaultData, ...this.settings[this.configKeyName]};
+
         if (config.runsInApp) {
             this.registerAction('配置用户', this.setWidgetUserConfig);
         }
     }
 
-    defaultData = {
-        username: '',
-        password: '',
-        custom_name: '',
-        custom_car_image: null,
-        custom_logo_image: null,
-        vin: '',
-        map_api_key: null
-    };
-
-    setWidgetUserConfig = async () => {
+    async setWidgetUserConfig() {
         const b = new Alert();
 
         b.title = '郑重声明';
@@ -104,40 +112,42 @@ class Widget extends Base {
             Keychain.set(this.MY_BMW_AGREE, 'true');
         }
 
-        const _alert = new Alert();
-        _alert.title = 'My BMW';
-        _alert.message = '配置My BMW账号密码';
+        const userInfoAlert = new Alert();
+        userInfoAlert.title = 'My BMW';
+        userInfoAlert.message = '配置My BMW账号密码';
 
-        _alert.addTextField('账号86+您的电话', this.defaultData.username);
-        _alert.addSecureTextField('密码（不要有特殊字符）', this.defaultData.password);
-        _alert.addTextField('自定义车名', this.defaultData.custom_name);
-        _alert.addTextField('自定义车辆图片（URL）', this.defaultData.custom_car_image);
-        _alert.addTextField('自定义LOGO（URL）', this.defaultData.custom_logo_image);
-        _alert.addTextField('车架号(多辆BMW时填写)', this.defaultData.vin);
-        _alert.addTextField('高德API(选填)', this.defaultData.map_api_key);
+        userInfoAlert.addTextField('账号86+您的电话', this.defaultData.username);
+        userInfoAlert.addSecureTextField('密码（不要有特殊字符）', this.defaultData.password);
+        userInfoAlert.addTextField('自定义车名', this.defaultData.custom_name);
+        userInfoAlert.addTextField('自定义车辆图片（URL）', this.defaultData.custom_vehicle_image);
+        userInfoAlert.addTextField('自定义LOGO（URL）', this.defaultData.custom_logo_image);
+        userInfoAlert.addTextField('车架号(多辆BMW时填写)', this.defaultData.vin);
 
-        _alert.addAction('确定');
-        _alert.addCancelAction('取消');
+        // TODO: support different map api and start up with different map app
+        userInfoAlert.addTextField('高德API(选填)', this.defaultData.map_api_key);
 
-        const id = await _alert.presentAlert();
+        userInfoAlert.addAction('确定');
+        userInfoAlert.addCancelAction('取消');
+
+        const id = await userInfoAlert.presentAlert();
 
         if (id == -1) {
             return;
         }
 
         // start to get data
-        this.defaultData.username = _alert.textFieldValue(0);
-        this.defaultData.password = _alert.textFieldValue(1);
-        this.defaultData.custom_name = _alert.textFieldValue(2);
-        this.defaultData.custom_car_image = _alert.textFieldValue(3);
-        this.defaultData.custom_logo_image = _alert.textFieldValue(4);
-        this.defaultData.vin = _alert.textFieldValue(5);
-        this.defaultData.map_api_key = _alert.textFieldValue(6);
+        this.defaultData.username = userInfoAlert.textFieldValue(0);
+        this.defaultData.password = userInfoAlert.textFieldValue(1);
+        this.defaultData.custom_name = userInfoAlert.textFieldValue(2);
+        this.defaultData.custom_vehicle_image = userInfoAlert.textFieldValue(3);
+        this.defaultData.custom_logo_image = userInfoAlert.textFieldValue(4);
+        this.defaultData.vin = userInfoAlert.textFieldValue(5);
+        this.defaultData.map_api_key = userInfoAlert.textFieldValue(6);
 
         // write to local
         this.settings[this.configKeyName] = this.defaultData;
         this.saveSettings();
-    };
+    }
 
     /**
      * 渲染函数，函数名固定
@@ -172,7 +182,7 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
+        let logoURL = 'https://s3.bmp.ovh/imgs/2021/10/a687f0e4702c1607.png';
 
         if (this.defaultData.custom_logo_image) {
             logoURL = this.defaultData.custom_logo_image;
@@ -577,7 +587,7 @@ class Widget extends Base {
      */
     async getData() {
         let accessToken = await this.getAccessToken();
-        if (accessToken === '') {
+        if (accessToken == '') {
             return null;
         }
 
@@ -585,7 +595,7 @@ class Widget extends Base {
             await this.checkInDaily(accessToken);
         } catch (e) {}
 
-        const data = await this.getVIN(accessToken);
+        const data = await this.getVehicleDetails(accessToken);
         return data;
     }
 
@@ -599,85 +609,62 @@ class Widget extends Base {
 
     async getPublicKey() {
         let req = new Request(BMW_SERVER_HOST + '/eadrax-coas/v1/cop/publickey');
-        req.headers = {
-            'user-agent': 'Dart/2.10 (dart:io)',
-            'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
-            host: 'myprofile.bmw.com.cn',
-            'x-cluster-use-mock': 'never',
-            '24-hour-format': 'true'
-        };
+
+        req.headers = {};
+
         const res = await req.loadJSON();
-        if (res.code === 200 && res.data.value) {
+        if (res.code == 200 && res.data.value) {
             console.log('Getting public key success');
             return res.data.value;
         } else {
             console.log('Getting public key failed');
-            return null;
+            return '';
         }
     }
 
     async getAccessToken() {
         let accessToken = '';
-        if (Keychain.contains(this.MY_BMW_UPDATE_AT)) {
-            let lastUpdate = parseInt(Keychain.get(this.MY_BMW_UPDATE_AT));
-
+        if (Keychain.contains(this.MY_BMW_UPDATE_LAST_AT)) {
+            let lastUpdate = parseInt(Keychain.get(this.MY_BMW_UPDATE_LAST_AT));
             if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
                 if (Keychain.contains(this.MY_BMW_TOKEN)) {
                     accessToken = Keychain.get(this.MY_BMW_TOKEN);
                 }
             } else {
                 if (Keychain.contains(this.MY_BMW_REFRESH_TOKEN)) {
-                    let refresh_token = Keychain.get(this.MY_BMW_REFRESH_TOKEN);
-                    // 刷新token
-                    accessToken = await this.refreshToken(refresh_token);
+                    let refreshToken = Keychain.get(this.MY_BMW_REFRESH_TOKEN);
+                    // get refresh token
+                    accessToken = await this.refreshToken(refreshToken);
                 }
             }
         }
 
-        if (!accessToken || accessToken == '') {
-            console.log('No token found, get again');
-            const loginRes = await this.myLogin();
-            if (loginRes !== null) {
-                const {access_token, refresh_token, token_type} = loginRes;
-                accessToken = access_token;
-                Keychain.set(this.MY_BMW_UPDATE_AT, String(new Date().valueOf()));
+        if (accessToken && accessToken != '') {
+            return accessToken;
+        }
+
+        console.log('No token found, get again');
+        const res = await this.myBMWLogin();
+
+        if (res) {
+            const {access_token, refresh_token} = res;
+
+            accessToken = access_token;
+            try {
+                Keychain.set(this.MY_BMW_UPDATE_LAST_AT, String(new Date().valueOf()));
                 Keychain.set(this.MY_BMW_TOKEN, accessToken);
                 Keychain.set(this.MY_BMW_REFRESH_TOKEN, refresh_token);
-            } else {
-                accessToken = '';
+            } catch (e) {
+                console.error(e.message);
             }
+        } else {
+            accessToken = '';
         }
+
         return accessToken;
     }
 
-    async refreshToken(refresh_token) {
-        let req = new Request(BMW_SERVER_HOST + '//eadrax-coas/v1/oauth/token');
-        req.headers = {
-            'user-agent': 'Dart/2.10 (dart:io)',
-            'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
-            authorization:
-                'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJhYzRkZTdmYi00ZTg3LTQ3MjctOTNkNS1jMDY1MzMwYmI3ZTgkMSRBJDE2Mjc0ODA0NTExNjciLCJuYmYiOjE2Mjc0ODA0NTEsImV4cCI6MTYyNzQ4Mzc1MSwiaWF0IjoxNjI3NDgwNDUxfQ.bX_KZbSzVYnM9ht8S9Cu__Kawg6XsEcpn-qA7YRi4GA',
-            'content-type': 'application/json; charset=utf-8',
-            host: 'myprofile.bmw.com.cn',
-            'x-cluster-use-mock': 'never',
-            '24-hour-format': 'true'
-        };
-        req.method = 'POST';
-        req.body = `grant_type=refresh_token&refresh_token=${refresh_token}`;
-        const res = await req.loadJSON();
-
-        if (res.access_token !== undefined) {
-            const {access_token, refresh_token} = res;
-            Keychain.set(this.MY_BMW_UPDATE_AT, String(new Date().valueOf()));
-            Keychain.set(this.MY_BMW_TOKEN, access_token);
-            Keychain.set(this.MY_BMW_REFRESH_TOKEN, refresh_token);
-            return access_token;
-        } else {
-            return '';
-        }
-    }
-
-    async myLogin() {
+    async myBMWLogin() {
         console.log('Start to get token');
         const _password = await this.getEncryptedPassword();
         let req = new Request(BMW_SERVER_HOST + '/eadrax-coas/v1/login/pwd');
@@ -689,14 +676,10 @@ class Widget extends Base {
             password: _password
         });
 
-        req.headers = {
-            'user-agent': 'Dart/2.10 (dart:io)',
-            'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
-            host: 'myprofile.bmw.com.cn'
-        };
+        req.headers = BMW_HEADERS;
 
         const res = await req.loadJSON();
-        if (res.code === 200) {
+        if (res.code == 200) {
             return res.data;
         } else {
             console.log('Get token error');
@@ -717,11 +700,11 @@ class Widget extends Base {
         };
 
         req.addParameterToMultipart('publicKey', publicKey);
-        req.addParameterToMultipart('encStr', this.defaultData.password);
+        req.addParameterToMultipart('encStr', encodeURIComponent(this.defaultData.password));
         req.addParameterToMultipart('etype', 'rsa1');
 
         const res = await req.loadJSON();
-        if (res.code === 200) {
+        if (res.code == 200) {
             return res.data;
         } else {
             console.log('Encrypted password error');
@@ -730,55 +713,81 @@ class Widget extends Base {
         }
     }
 
-    async getVIN(access_token) {
+    async refreshToken(refresh_token) {
+        let req = new Request(BMW_SERVER_HOST + '/eadrax-coas/v1/oauth/token');
+        req.headers = {
+            ...BMW_HEADERS,
+            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
+        };
+        req.method = 'POST';
+        req.body = `grant_type=refresh_token&refresh_token=${refresh_token}`;
+        const res = await req.loadJSON();
+
+        if (res.access_token !== undefined) {
+            const {access_token, refresh_token} = res;
+
+            Keychain.set(this.MY_BMW_TOKEN, access_token);
+            Keychain.set(this.MY_BMW_REFRESH_TOKEN, refresh_token);
+
+            Keychain.set(this.MY_BMW_UPDATE_LAST_AT, String(new Date().valueOf()));
+
+            return access_token;
+        } else {
+            return '';
+        }
+    }
+
+    async getVehicleDetails(access_token) {
         console.log('Start to get vehicle details');
         let req = new Request(
-            `https://myprofile.bmw.com.cn/eadrax-vcs/v1/vehicles?apptimezone=480&appDateTime=${new Date().valueOf()}`
+            BMW_SERVER_HOST + `/eadrax-vcs/v1/vehicles?apptimezone=480&appDateTime=${new Date().valueOf()}`
         );
 
         req.headers = {
-            'user-agent': 'Dart/2.10 (dart:io)',
-            'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
+            ...BMW_HEADERS,
             authorization: 'Bearer ' + access_token,
-            'content-type': 'application/json; charset=utf-8',
-            host: 'myprofile.bmw.com.cn',
-            'x-cluster-use-mock': 'never',
-            '24-hour-format': 'true'
+            'content-type': 'application/json; charset=utf-8'
         };
 
-        const res = await req.loadJSON();
+        const vehicles = await req.loadJSON();
         let vin = this.defaultData.vin;
 
-        if (res instanceof Array) {
+        console.warn(JSON.stringify(vehicles));
+
+        if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
             console.log('Get vehicle details success');
             if (vin && vin.length > 0) {
-                let vinLow = vin.toLowerCase();
-                let findVin = res.filter((p) => p.vin.toLowerCase() === vinLow);
-                if (findVin.length === 0) {
-                    findVin = res[0];
+                // if more than one vehicle
+                let vehicleFound = vehicles.find((vehicle) => {
+                    return vehicle.vin && vehicle.vin.toUpperCase() == vin.toUpperCase();
+                });
+
+                if (vehicleFound) {
+                    console.log('VIN matched and found');
+
+                    return vehicleFound;
                 }
-                return findVin[0];
-            } else {
-                return res[0];
             }
+
+            return vehicles[0];
         } else {
-            console.log(res);
+            console.error('Load vehicle failed');
             return null;
         }
     }
 
     async checkInDaily(access_token) {
+        // TODO: set check in during hours in the day
         let dateFormatter = new DateFormatter();
-
-        let lastCheckIn = null;
 
         dateFormatter.dateFormat = 'yyyy-MM-dd';
         let today = dateFormatter.string(new Date());
 
-        if (Keychain.contains(this.MY_BMW_CHECK_IN_AT)) {
-            lastCheckIn = Keychain.get(this.MY_BMW_CHECK_IN_AT);
+        if (Keychain.contains(this.MY_BMW_LAST_CHECK_IN)) {
+            const lastCheckIn = Keychain.get(this.MY_BMW_LAST_CHECK_IN);
             console.log('last checked in at: ' + lastCheckIn);
-            if (lastCheckIn == today) {
+
+            if (lastCheckIn === today) {
                 console.log('App has checked in');
 
                 return;
@@ -786,22 +795,18 @@ class Widget extends Base {
         }
 
         console.log('Start check in');
-        let req = new Request(BMW_SERVER_HOST + '/cis/eadrax-community/private-api/v1/mine/check-in');
+        let req = new Request(BMW_SERVER_HOST + '/is/eadrax-community/private-api/v1/mine/check-in');
         req.headers = {
-            'user-agent': 'Dart/2.10 (dart:io)',
-            'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
+            ...BMW_HEADERS,
             authorization: 'Bearer ' + access_token,
-            'content-type': 'application/json; charset=utf-8',
-            host: 'myprofile.bmw.com.cn',
-            'x-cluster-use-mock': 'never',
-            '24-hour-format': 'true'
+            'content-type': 'application/json; charset=utf-8'
         };
 
         req.method = 'POST';
         req.body = JSON.stringify({signDate: null});
 
         const res = await req.loadJSON();
-        Keychain.set(this.MY_BMW_CHECK_IN_AT, today);
+        Keychain.set(this.MY_BMW_LAST_CHECK_IN, today);
 
         console.log(res);
 
@@ -837,12 +842,8 @@ class Widget extends Base {
 
             req.method = 'GET';
             req.headers = {
-                'user-agent': 'Dart/2.10 (dart:io)',
-                'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
-                authorization: 'Bearer ' + access_token,
-                host: 'myprofile.bmw.com.cn',
-                'x-cluster-use-mock': 'never',
-                '24-hour-format': 'true'
+                ...BMW_HEADERS,
+                authorization: 'Bearer ' + access_token
             };
 
             const img = await req.loadImage();
@@ -862,9 +863,10 @@ class Widget extends Base {
 
     async getVehicleImage(data) {
         let imageCar = '';
-        let carImageUrl = `https://myprofile.bmw.com.cn/eadrax-ics/v3/presentation/vehicles/${data.vin}/images?carView=VehicleStatus`;
-        if (this.defaultData.custom_car_image) {
-            imageCar = await this.getImageByUrl(this.defaultData.custom_car_image);
+        let carImageUrl =
+            BMW_SERVER_HOST + `/eadrax-ics/v3/presentation/vehicles/${data.vin}/images?carView=VehicleStatus`;
+        if (this.defaultData.custom_vehicle_image) {
+            imageCar = await this.getImageByUrl(this.defaultData.custom_vehicle_image);
         } else {
             imageCar = await this.getBmwOfficialImage(carImageUrl);
         }
