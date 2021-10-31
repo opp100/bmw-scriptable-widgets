@@ -23,7 +23,7 @@ class Widget extends Base {
     MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
     MY_BMW_TOKEN = 'MY_BMW_TOKEN';
     MY_BMW_UPDATE_AT = 'MY_BMW_UPDATE_AT';
-    MY_BMW_CHECKIN_AT = 'MY_BMW_CHECKIN_AT';
+    MY_BMW_CHECK_IN_AT = 'MY_BMW_CHECK_IN_AT';
     MY_BMW_AGREE = 'MY_BMW_AGREE';
 
     DeviceSize = {
@@ -172,7 +172,7 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        let logoURL = 'https://s3.bmp.ovh/imgs/2021/10/a687f0e4702c1607.png';
+        let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
 
         if (this.defaultData.custom_logo_image) {
             logoURL = this.defaultData.custom_logo_image;
@@ -770,13 +770,15 @@ class Widget extends Base {
     async checkInDaily(access_token) {
         let dateFormatter = new DateFormatter();
 
+        let lastCheckIn = null;
+
         dateFormatter.dateFormat = 'yyyy-MM-dd';
         let today = dateFormatter.string(new Date());
 
-        if (Keychain.contains(this.MY_BMW_CHECKIN_AT)) {
-            const lastCheckIn = Keychain.get(this.MY_BMW_CHECKIN_AT);
+        if (Keychain.contains(this.MY_BMW_CHECK_IN_AT)) {
+            lastCheckIn = Keychain.get(this.MY_BMW_CHECK_IN_AT);
             console.log('last checked in at: ' + lastCheckIn);
-            if (lastCheckIn === today) {
+            if (lastCheckIn == today) {
                 console.log('App has checked in');
 
                 return;
@@ -799,7 +801,7 @@ class Widget extends Base {
         req.body = JSON.stringify({signDate: null});
 
         const res = await req.loadJSON();
-        Keychain.set(this.MY_BMW_CHECKIN_AT, today);
+        Keychain.set(this.MY_BMW_CHECK_IN_AT, today);
 
         console.log(res);
 
@@ -807,9 +809,9 @@ class Widget extends Base {
 
         n.title = 'My BMW签到';
         n.body = `${res.message || ''}: ${res.businessCode || ''}`;
-        
+
         if (res.code != 200) {
-            n.body += `, 上次签到: ${this.MY_BMW_CHECKIN_AT}.`;
+            n.body += `, 上次签到: ${lastCheckIn || 'None'}.`;
         }
 
         n.schedule();
