@@ -104,7 +104,7 @@ class Widget extends Base {
         b.addCancelAction('不同意');
 
         const idb = await b.presentAlert();
-        if (idb === -1) {
+        if (idb == -1) {
             console.log('User denied');
             Keychain.set(this.MY_BMW_AGREE, 'false');
             return;
@@ -151,15 +151,18 @@ class Widget extends Base {
 
     async render() {
         await this.renderError('载入中...');
-        if (this.defaultData.username === '') {
+        if (this.defaultData.username == '') {
             console.error('尚未配置用户');
             return await this.renderError('请先配置用户');
         }
         let screenSize = Device.screenSize();
         const data = await this.getData();
-        if (data === null) {
-            return await this.renderError('请确认授权');
+
+        if (data == null) {
+            return await this.renderError('获取车辆信息失败，请检查授权');
         }
+
+        // start to render if we get information
         try {
             data.size = this.DeviceSize[`${screenSize.width}x${screenSize.height}`] || this.DeviceSize['375x812'];
         } catch (e) {
@@ -760,7 +763,7 @@ class Widget extends Base {
         if (Keychain.contains(this.MY_BMW_LAST_CHECK_IN)) {
             console.log('last checked in at: ' + lastCheckIn);
 
-            if (lastCheckIn === today) {
+            if (lastCheckIn == today) {
                 console.log('App has checked in');
 
                 return;
