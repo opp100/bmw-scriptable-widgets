@@ -23,13 +23,41 @@ class Widget extends Base {
     MY_BMW_AGREE = 'MY_BMW_AGREE';
 
     DeviceSize = {
-        '428x926': {small: 176, medium: [374, 176], large: [374, 391]},
-        '390x844': {small: 161, medium: [342, 161], large: [342, 359]},
-        '414x896': {small: 169, medium: [360, 169], large: [360, 376]},
-        '375x812': {small: 155, medium: [329, 155], large: [329, 345]},
-        '414x736': {small: 159, medium: [348, 159], large: [348, 357]},
-        '375x667': {small: 148, medium: [322, 148], large: [322, 324]},
-        '320x568': {small: 141, medium: [291, 141], large: [291, 299]}
+        '428x926': {
+            small: {width: 176, height: 176},
+            medium: {width: 374, height: 176},
+            large: {width: 374, height: 391}
+        },
+        '390x844': {
+            small: {width: 161, height: 161},
+            medium: {width: 342, height: 161},
+            large: {width: 342, height: 359}
+        },
+        '414x896': {
+            small: {width: 169, height: 169},
+            medium: {width: 360, height: 169},
+            large: {width: 360, height: 376}
+        },
+        '375x812': {
+            small: {width: 155, height: 155},
+            medium: {width: 329, height: 155},
+            large: {width: 329, height: 345}
+        },
+        '414x736': {
+            small: {width: 159, height: 159},
+            medium: {width: 348, height: 159},
+            large: {width: 348, height: 357}
+        },
+        '375x667': {
+            small: {width: 148, height: 148},
+            medium: {width: 322, height: 148},
+            large: {width: 322, height: 324}
+        },
+        '320x568': {
+            small: {width: 141, height: 141},
+            medium: {width: 291, height: 141},
+            large: {width: 291, height: 299}
+        }
     };
 
     constructor(arg) {
@@ -50,14 +78,15 @@ class Widget extends Base {
         custom_name: '',
         custom_car_image: null,
         custom_logo_image: null,
-        vin: ''
+        vin: '',
+        map_api_key: null
     };
 
     setWidgetUserConfig = async () => {
         const b = new Alert();
 
-        b.title = '申明';
-        b.message = `小组件需要BMW账号\n\r\n首次登录请配置您的账号和密码进行令牌获取\n\r\n作者不会收集您的个人账户信息，但也请您妥善保管自己的账号`;
+        b.title = '郑重声明';
+        b.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n本组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号`;
 
         b.addAction('同意');
         b.addCancelAction('不同意');
@@ -81,6 +110,7 @@ class Widget extends Base {
         _alert.addTextField('自定义车辆图片（URL）', this.defaultData.custom_car_image);
         _alert.addTextField('自定义LOGO（URL）', this.defaultData.custom_logo_image);
         _alert.addTextField('车架号(多辆BMW时填写)', this.defaultData.vin);
+        _alert.addTextField('高德API(选填)', this.defaultData.map_api_key);
 
         _alert.addAction('确定');
         _alert.addCancelAction('取消');
@@ -98,6 +128,7 @@ class Widget extends Base {
         this.defaultData.custom_car_image = _alert.textFieldValue(3);
         this.defaultData.custom_logo_image = _alert.textFieldValue(4);
         this.defaultData.vin = _alert.textFieldValue(5);
+        this.defaultData.map_api_key = _alert.textFieldValue(6);
 
         // write to local
         this.settings[this.configKeyName] = this.defaultData;
@@ -114,13 +145,13 @@ class Widget extends Base {
             console.error('尚未配置用户');
             return await this.renderError('请先配置用户');
         }
-        let size = Device.screenSize();
+        let screenSize = Device.screenSize();
         const data = await this.getData();
         if (data === null) {
             return await this.renderError('请确认授权');
         }
         try {
-            data.size = this.DeviceSize[`${size.width}x${size.height}`] || this.DeviceSize['375x812'];
+            data.size = this.DeviceSize[`${screenSize.width}x${screenSize.height}`] || this.DeviceSize['375x812'];
         } catch (e) {
             console.warn(e);
             await this.renderError('显示错误：' + e.message);
@@ -174,7 +205,7 @@ class Widget extends Base {
     async renderSmall(data) {
         let w = new ListWidget();
 
-        const width = data.size.small;
+        const width = data.size['small']['width'];
 
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
@@ -188,12 +219,12 @@ class Widget extends Base {
         topBox.setPadding(6, 12, 0, 0);
 
         // ---顶部左边部件---
-        const topLeftBox = topBox.addStack();
-        const carNameBox = topLeftBox.addStack();
+        const topleftContainer = topBox.addStack();
+        const carNameBox = topleftContainer.addStack();
 
         carNameBox.setPadding(0, 0, 0, 0);
 
-        let carName = `${data.bodyType} ${data.model}`;
+        let carName = `${data.brand} ${data.model}`;
         if (this.defaultData.custom_name.length > 0) {
             carName = this.defaultData.custom_name;
         }
@@ -240,14 +271,14 @@ class Widget extends Base {
         carInfoContainer.layoutVertically();
         carInfoContainer.setPadding(14, 12, 0, 0);
 
-        const remainKmBox = carInfoContainer.addStack();
-        remainKmBox.layoutHorizontally();
-        remainKmBox.topAlignContent();
+        const kmContainer = carInfoContainer.addStack();
+        kmContainer.layoutHorizontally();
+        kmContainer.topAlignContent();
 
-        const remainKmTxt = remainKmBox.addText(`${rangeValue} ${rangeUnits}`);
+        const remainKmTxt = kmContainer.addText(`${rangeValue} ${rangeUnits}`);
         remainKmTxt.font = this.getFont(`${WIDGET_FONT}-Bold`, 14);
         remainKmTxt.textColor = fontColor;
-        const levelContainer = remainKmBox.addStack();
+        const levelContainer = kmContainer.addStack();
         levelContainer.setPadding(0, 2, 0, 2);
         const remainKmUnitTxt = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
         remainKmUnitTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 14);
@@ -303,50 +334,49 @@ class Widget extends Base {
     /**
      * 渲染中尺寸组件
      */
-    async renderMedium(data) {
+    async renderMedium(data, renderLarge = false) {
         let w = new ListWidget();
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
         w.backgroundGradient = this.getBack();
 
-        w.setPadding(0, 0, 0, 2);
-        const width = data.size.medium[0];
-        const height = data.size.medium[1];
+        w.setPadding(0, 0, 0, 0);
+        const {width, height} = data.size['medium'];
 
-        const bodyBox = w.addStack();
+        const bodyContainer = w.addStack();
+        bodyContainer.setPadding(0, 0, 0, 0);
+        bodyContainer.layoutHorizontally();
 
-        bodyBox.setPadding(0, 0, 0, 0);
-        bodyBox.layoutHorizontally();
-        const leftBox = bodyBox.addStack();
-        leftBox.layoutVertically();
-        leftBox.size = new Size(width * 0.5, height);
+        const leftContainer = bodyContainer.addStack();
+        leftContainer.layoutVertically();
+        leftContainer.size = new Size(width * 0.5, height);
 
-        const carNameDom = leftBox.addStack();
-        carNameDom.setPadding(8, 14, 0, 0);
+        const carNameContainer = leftContainer.addStack();
+        carNameContainer.setPadding(8, 14, 0, 0);
 
-        let carName = `${data.brand} ${data.model}`;
+        let carName = `${data.brand} ${data.model} ${data.bodyType}`;
         if (this.defaultData.custom_name.length > 0) {
             carName = this.defaultData.custom_name;
         }
-        const carNameText = carNameDom.addText(carName);
+        const carNameText = carNameContainer.addText(carName);
         carNameText.font = this.getFont(`${WIDGET_FONT}-Bold`, 16);
         carNameText.textColor = fontColor;
-        carNameDom.addSpacer();
+        carNameContainer.addSpacer();
 
-        const kmBox = leftBox.addStack();
-        kmBox.setPadding(20, 14, 0, 0);
+        const kmContainer = leftContainer.addStack();
+        kmContainer.setPadding(20, 14, 0, 0);
         const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
-        const kmText = kmBox.addText(`${rangeValue + ' ' + rangeUnits}`);
+        const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
         kmText.font = this.getFont(`${WIDGET_FONT}-Bold`, 16);
         kmText.textColor = fontColor;
 
-        const levelContainer = kmBox.addStack();
+        const levelContainer = kmContainer.addStack();
         levelContainer.setPadding(4, 4, 0, 0);
         const levelText = levelContainer.addText(`/${levelValue}${levelUnits}`);
         levelText.font = this.getFont(`${WIDGET_FONT}-Regular`, 12);
         levelText.textColor = fontColor;
         levelText.textOpacity = 0.7;
 
-        const carStatusContainer = leftBox.addStack();
+        const carStatusContainer = leftContainer.addStack();
         carStatusContainer.setPadding(8, 14, 0, 0);
 
         const carStatusBox = carStatusContainer.addStack();
@@ -377,9 +407,9 @@ class Widget extends Base {
                 data.properties.vehicleLocation.coordinates.latitude;
         } catch (e) {}
 
-        leftBox.addSpacer();
+        leftContainer.addSpacer();
 
-        const locationContainer = leftBox.addStack();
+        const locationContainer = leftContainer.addStack();
         locationContainer.setPadding(16, 14, 16, 2);
 
         const locationText = locationContainer.addText(locationStr);
@@ -388,12 +418,12 @@ class Widget extends Base {
         locationText.textOpacity = 0.5;
         locationText.url = `http://maps.apple.com/?address=${encodeURI(locationStr)}&ll=${latLng}&t=m`;
 
-        const rightBox = bodyBox.addStack();
-        rightBox.setPadding(8, 0, 0, 8);
-        rightBox.layoutVertically();
-        rightBox.size = new Size(width * 0.5, height);
+        const rightContainer = bodyContainer.addStack();
+        rightContainer.setPadding(8, 0, 0, 8);
+        rightContainer.layoutVertically();
+        rightContainer.size = new Size(width * 0.5, height);
 
-        const logoImageContainer = rightBox.addStack();
+        const logoImageContainer = rightContainer.addStack();
         logoImageContainer.addSpacer();
 
         try {
@@ -404,7 +434,7 @@ class Widget extends Base {
             }
         } catch (e) {}
 
-        // const versionContainer = rightBox.addStack();
+        // const versionContainer = rightContainer.addStack();
         // versionContainer.layoutHorizontally();
         // versionContainer.addSpacer();
 
@@ -412,7 +442,7 @@ class Widget extends Base {
         // versionText.rightAlignText();
         // versionText.font = this.getFont(`${WIDGET_FONT}-Regular`, 8);
 
-        const carImageContainer = rightBox.addStack();
+        const carImageContainer = rightContainer.addStack();
         carImageContainer.setPadding(8, 0, 0, 8);
         carImageContainer.size = new Size(width * 0.5, height - 38);
         carImageContainer.bottomAlignContent();
@@ -423,7 +453,7 @@ class Widget extends Base {
             carImage.rightAlignImage();
         } catch (e) {}
 
-        rightBox.addSpacer();
+        rightContainer.addSpacer();
 
         w.url = 'de.bmw.connected.mobile20.cn://';
 
@@ -434,7 +464,74 @@ class Widget extends Base {
      * 渲染大尺寸组件
      */
     async renderLarge(data) {
-        return await this.renderMedium(data, 10);
+        let w = await this.renderMedium(data, true);
+        const {width, height} = data.size['large'];
+        w.setPadding(0, 0, 0, 0);
+        w.addSpacer();
+
+        let largeExtraContainer = w.addStack();
+        largeExtraContainer.bottomAlignContent();
+
+        let latLng = null;
+        try {
+            latLng =
+                data.properties.vehicleLocation.coordinates.longitude +
+                ',' +
+                data.properties.vehicleLocation.coordinates.latitude;
+        } catch (e) {}
+
+        let mapImage = await this.loadMapView(latLng, width, height * 0.5);
+        let carImage = largeExtraContainer.addImage(mapImage);
+        carImage.centerAlignImage();
+
+        return w;
+    }
+
+    async loadMapView(latLng, width, height, useCache = true) {
+        if (this.defaultData.map_api_key) {
+            return false;
+        }
+
+        let mapApiKey = this.defaultData.map_api_key;
+
+        width = parseInt(width);
+        height = parseInt(height);
+
+        let url = `https://restapi.amap.com/v3/staticmap?location=${latLng}&zoom=14&size=${width}*${height}&markers=mid,,:${latLng}&key=${mapApiKey}`;
+
+        const cacheKey = this.md5(url);
+        const cacheFile = FileManager.local().joinPath(FileManager.local().temporaryDirectory(), cacheKey);
+
+        if (useCache && FileManager.local().fileExists(cacheFile)) {
+            console.log('load map from cache');
+            return Image.fromFile(cacheFile);
+        }
+
+        try {
+            console.log('load map from API');
+
+            let req = new Request(url);
+
+            req.method = 'GET';
+
+            const img = await req.loadImage();
+
+            // 存储到缓存
+            FileManager.local().writeImage(cacheFile, img);
+
+            return img;
+        } catch (e) {
+            console.log('load map failed');
+            console.error(e);
+            let ctx = new DrawContext();
+            ctx.size = new Size(width, height);
+
+            ctx.setFillColor(Color.dynamic(Color.white(), new Color('#2B2B2B')));
+            ctx.fillRect(new Rect(0, 0, width, height));
+            ctx.drawTextInRect('地图获取失败', new Rect(20, 20, width, height));
+
+            return await ctx.getImage();
+        }
     }
 
     /**
@@ -631,7 +728,7 @@ class Widget extends Base {
     async checkInDaily(access_token) {
         let today = this.timeFormat('yyyyMMdd');
         console.log(today);
-        
+
         let hasCheckIn = false;
 
         if (Keychain.contains(this.MY_BMW_LAST_CHECK_IN)) {
@@ -666,7 +763,7 @@ class Widget extends Base {
             const n = new Notification();
 
             n.title = '签到';
-            n.body = res.message;
+            n.body = `${res.message}: ${res.businessCode}`;
             n.schedule();
         }
     }
