@@ -149,10 +149,6 @@ class Widget extends Base {
         this.saveSettings();
     }
 
-    /**
-     * 渲染函数，函数名固定
-     * 可以根据 this.widgetFamily 来判断小组件尺寸，以返回不同大小的内容
-     */
     async render() {
         await this.renderError('载入中...');
         if (this.defaultData.username === '') {
@@ -182,7 +178,7 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        let logoURL = 'https://s3.bmp.ovh/imgs/2021/10/a687f0e4702c1607.png';
+        let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
 
         if (this.defaultData.custom_logo_image) {
             logoURL = this.defaultData.custom_logo_image;
@@ -203,11 +199,7 @@ class Widget extends Base {
         return w;
     }
 
-    /**
-     * 渲染小尺寸组件
-     */
-
-    getBack() {
+    getBackgroundColor() {
         const bgColor = new LinearGradient();
 
         bgColor.colors = [
@@ -223,7 +215,7 @@ class Widget extends Base {
     async renderSmall(data) {
         let w = new ListWidget();
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
-        w.backgroundGradient = this.getBack();
+        w.backgroundGradient = this.getBackgroundColor();
 
         const width = data.size['small']['width'];
 
@@ -335,13 +327,10 @@ class Widget extends Base {
         return w;
     }
 
-    /**
-     * 渲染中尺寸组件
-     */
     async renderMedium(data, renderLarge = false) {
         let w = new ListWidget();
         let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
-        w.backgroundGradient = this.getBack();
+        w.backgroundGradient = this.getBackgroundColor();
 
         w.setPadding(0, 0, 0, 0);
         const {width, height} = data.size['medium'];
@@ -485,9 +474,6 @@ class Widget extends Base {
         return w;
     }
 
-    /**
-     * 渲染大尺寸组件
-     */
     async renderLarge(data) {
         let w = await this.renderMedium(data, true);
         const {width, height} = data.size['large'];
@@ -582,9 +568,6 @@ class Widget extends Base {
         return `http://maps.apple.com/?address=${encodeURI(locationStr)}&ll=${latLng}&t=m`;
     }
 
-    /**
-     * 获取数据函数，函数名可不固定
-     */
     async getData() {
         let accessToken = await this.getAccessToken();
         if (accessToken == '') {
@@ -597,14 +580,6 @@ class Widget extends Base {
 
         const data = await this.getVehicleDetails(accessToken);
         return data;
-    }
-
-    /**
-     * 自定义注册点击事件，用 actionUrl 生成一个触发链接，点击后会执行下方对应的 action
-     * @param {string} url 打开的链接
-     */
-    async actionOpenUrl(url) {
-        Safari.openInApp(url, false);
     }
 
     async getPublicKey() {
@@ -752,8 +727,6 @@ class Widget extends Base {
         const vehicles = await req.loadJSON();
         let vin = this.defaultData.vin;
 
-        console.warn(JSON.stringify(vehicles));
-
         if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
             console.log('Get vehicle details success');
             if (vin && vin.length > 0) {
@@ -779,12 +752,12 @@ class Widget extends Base {
     async checkInDaily(access_token) {
         // TODO: set check in during hours in the day
         let dateFormatter = new DateFormatter();
+        const lastCheckIn = Keychain.get(this.MY_BMW_LAST_CHECK_IN);
 
         dateFormatter.dateFormat = 'yyyy-MM-dd';
         let today = dateFormatter.string(new Date());
 
         if (Keychain.contains(this.MY_BMW_LAST_CHECK_IN)) {
-            const lastCheckIn = Keychain.get(this.MY_BMW_LAST_CHECK_IN);
             console.log('last checked in at: ' + lastCheckIn);
 
             if (lastCheckIn === today) {
@@ -810,16 +783,13 @@ class Widget extends Base {
 
         console.log(res);
 
-        const n = new Notification();
-
-        n.title = 'My BMW签到';
-        n.body = `${res.message || ''}: ${res.businessCode || ''}`;
+        let msg = `${res.message || ''}: ${res.businessCode || ''}`;
 
         if (res.code != 200) {
-            n.body += `, 上次签到: ${lastCheckIn || 'None'}.`;
+            msg += `, 上次签到: ${lastCheckIn || 'None'}.`;
         }
 
-        n.schedule();
+        this.notify('My BMW签到', msg);
     }
 
     async getBmwOfficialImage(url, useCache = true) {
