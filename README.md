@@ -8,8 +8,12 @@
 小组件本身不需要服务器支持。
 
 ## 小组件效果
-![Alt text](/screenshots/example_1.JPG?raw=true "使用案例")
+![Alt text](/screenshots/example_1.PNG?raw=true "使用案例")
 
 ## 「小件件」开发框架
 > iOS 小组件快速开发框架 / 模板 / 小组件源码  👉 for [Scriptable](https://scriptable.app)    
 > 「小件件」开发框架[「小件件」开发框架](https://github.com/im3x/Scriptables)
+
+
+### 特别鸣谢
+感谢胡总、吹雪和部分群友，提供思路帮助与测试
