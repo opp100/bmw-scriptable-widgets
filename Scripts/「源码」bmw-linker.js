@@ -23,7 +23,7 @@ class Widget extends Base {
     MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
     MY_BMW_TOKEN = 'MY_BMW_TOKEN';
     MY_BMW_UPDATE_AT = 'MY_BMW_UPDATE_AT';
-    MY_BMW_LAST_CHECK_IN = 'MY_BMW_LAST_CHECK_IN';
+    MY_BMW_CHECKIN_AT = 'MY_BMW_CHECKIN_AT';
     MY_BMW_AGREE = 'MY_BMW_AGREE';
 
     DeviceSize = {
@@ -172,7 +172,7 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
+        let logoURL = 'https://s3.bmp.ovh/imgs/2021/10/a687f0e4702c1607.png';
 
         if (this.defaultData.custom_logo_image) {
             logoURL = this.defaultData.custom_logo_image;
@@ -768,45 +768,51 @@ class Widget extends Base {
     }
 
     async checkInDaily(access_token) {
-        let today = this.timeFormat('yyyyMMdd');
+        let dateFormatter = new DateFormatter();
 
-        let hasCheckIn = false;
+        dateFormatter.dateFormat = 'yyyy-MM-dd';
+        let today = dateFormatter.string(new Date());
 
-        if (Keychain.contains(this.MY_BMW_LAST_CHECK_IN)) {
-            const lastCheckIn = Keychain.get(this.MY_BMW_LAST_CHECK_IN);
-            console.log(lastCheckIn);
+        if (Keychain.contains(this.MY_BMW_CHECKIN_AT)) {
+            const lastCheckIn = Keychain.get(this.MY_BMW_CHECKIN_AT);
+            console.log('last checked in at: ' + lastCheckIn);
             if (lastCheckIn === today) {
-                hasCheckIn = true;
-                console.log('Checked');
+                console.log('App has checked in');
+
+                return;
             }
         }
-        if (!hasCheckIn) {
-            console.log('Start check in');
-            let req = new Request(BMW_SERVER_HOST + '/cis/eadrax-community/private-api/v1/mine/check-in');
-            req.headers = {
-                'user-agent': 'Dart/2.10 (dart:io)',
-                'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
-                authorization: 'Bearer ' + access_token,
-                'content-type': 'application/json; charset=utf-8',
-                host: 'myprofile.bmw.com.cn',
-                'x-cluster-use-mock': 'never',
-                '24-hour-format': 'true'
-            };
 
-            req.method = 'POST';
-            req.body = JSON.stringify({signDate: null});
+        console.log('Start check in');
+        let req = new Request(BMW_SERVER_HOST + '/cis/eadrax-community/private-api/v1/mine/check-in');
+        req.headers = {
+            'user-agent': 'Dart/2.10 (dart:io)',
+            'x-user-agent': 'ios(15.0.2);bmw;1.5.0(8954)',
+            authorization: 'Bearer ' + access_token,
+            'content-type': 'application/json; charset=utf-8',
+            host: 'myprofile.bmw.com.cn',
+            'x-cluster-use-mock': 'never',
+            '24-hour-format': 'true'
+        };
 
-            const res = await req.loadJSON();
-            Keychain.set(this.MY_BMW_LAST_CHECK_IN, today);
+        req.method = 'POST';
+        req.body = JSON.stringify({signDate: null});
 
-            console.log(res);
+        const res = await req.loadJSON();
+        Keychain.set(this.MY_BMW_CHECKIN_AT, today);
 
-            const n = new Notification();
+        console.log(res);
 
-            n.title = '签到';
-            n.body = `${res.message}: ${res.businessCode}`;
-            n.schedule();
+        const n = new Notification();
+
+        n.title = 'My BMW签到';
+        n.body = `${res.message || ''}: ${res.businessCode || ''}`;
+        
+        if (res.code != 200) {
+            n.body += `, 上次签到: ${this.MY_BMW_CHECKIN_AT}.`;
         }
+
+        n.schedule();
     }
 
     async getBmwOfficialImage(url, useCache = true) {
@@ -864,29 +870,6 @@ class Widget extends Base {
         return imageCar;
     }
 
-    timeFormat(fmt, ts = null) {
-        const date = ts ? new Date(ts) : new Date();
-        let o = {
-            'M+': date.getMonth() + 1,
-            'd+': date.getDate(),
-            'H+': date.getHours(),
-            'm+': date.getMinutes(),
-            's+': date.getSeconds(),
-            'q+': Math.floor((date.getMonth() + 3) / 3),
-            S: date.getMilliseconds()
-        };
-        if (/(y+)/.test(fmt)) fmt = fmt.replace(RegExp.$1, (date.getFullYear() + '').substr(4 - RegExp.$1.length));
-        for (let k in o)
-            if (new RegExp('(' + k + ')').test(fmt))
-                fmt = fmt.replace(RegExp.$1, RegExp.$1.length == 1 ? o[k] : ('00' + o[k]).substr(('' + o[k]).length));
-        return fmt;
-    }
-
-    /**
-     * @description Provide a font based on the input.
-     * @param {*} fontName
-     * @param {*} fontSize
-     */
     getFont(fontName, fontSize) {
         return new Font(fontName, fontSize);
     }
