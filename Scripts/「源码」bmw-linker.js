@@ -13,11 +13,15 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_VERSION = 'v1.7';
-let WIDGET_FONT = 'AvenirNext';
+let WIDGET_FONT = 'SF UI Display';
+let WIDGET_FONT_BOLD = 'SF UI Display Bold';
+
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
 let DEFAULT_BG_COLOR_DARK = '#2B2B2B';
+let DEFAULT_LOGO_LIGHT = 'https://z3.ax1x.com/2021/11/01/ICPAKS.png';
+let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICPAKS.png';
 
 // header is might be used for preventing the bmw block the external api?
 let BMW_HEADERS = {
@@ -82,9 +86,16 @@ class Widget extends Base {
     };
 
     appColorData = {
-        startColor: DEFAULT_BG_COLOR_LIGHT,
-        endColor: DEFAULT_BG_COLOR_LIGHT,
-        fontColor: null
+        light: {
+            startColor: DEFAULT_BG_COLOR_LIGHT,
+            endColor: DEFAULT_BG_COLOR_LIGHT,
+            fontColor: DEFAULT_BG_COLOR_DARK
+        },
+        dark: {
+            startColor: DEFAULT_BG_COLOR_DARK,
+            endColor: DEFAULT_BG_COLOR_DARK,
+            fontColor: DEFAULT_BG_COLOR_LIGHT
+        }
     };
 
     constructor(arg) {
@@ -92,8 +103,18 @@ class Widget extends Base {
         this.name = 'My BMW';
         this.desc = '宝马互联App小组件';
 
+        // load settings
         this.userConfigData = {...this.userConfigData, ...this.settings['UserConfig']};
-        this.appColorData = {...this.appColorData, ...this.settings['AppColorConfig']};
+
+        let colorSettings = this.settings['AppColorConfig'];
+        if (typeof colorSettings == 'string') {
+            try {
+                colorSettings = JSON.parse(colorSettings);
+            } catch (e) {
+                colorSettings = {};
+            }
+        }
+        this.appColorData = {...this.appColorData, ...colorSettings};
 
         if (config.runsInApp) {
             this.registerAction('配置小组件', this.setWidgetConfig);
@@ -119,23 +140,23 @@ class Widget extends Base {
         }
 
         await this.userConfigInput();
-        await this.colorConfigInput();
+        await this.colorSetPickUp();
     }
 
     async userConfigInput() {
         const userInfoAlert = new Alert();
         userInfoAlert.title = '配置小组件';
-        userInfoAlert.message = '配置My BMW账号密码';
+        userInfoAlert.message = '配置My BMW账号密码，其他设置可以留空。';
 
         // refer to default config
         let configSet = {
             username: '账号86+您的电话',
             password: '密码（不要有特殊字符）',
-            custom_name: '自定义车名',
-            custom_vehicle_image: '自定义车辆图片（URL）',
-            custom_logo_image: '自定义LOGO（URL）',
+            custom_name: '自定义车名（默认自动获取）',
+            custom_vehicle_image: '车辆图片URL（默认自动获取）',
+            custom_logo_image: 'LOGO URL(默认自动获取）',
             vin: '车架号(多辆BMW时填写)',
-            map_api_key: '高德地图API_KEY'
+            map_api_key: '高德地图API_KEY（非必要）'
         };
 
         for (const key in configSet) {
@@ -174,15 +195,88 @@ class Widget extends Base {
         this.saveSettings();
     }
 
+    async colorSetPickUp() {
+        const colorSetPickup = new Alert();
+
+        colorSetPickup.title = '选取背景颜色';
+        colorSetPickup.message = `请根据车辆颜色选取背景`;
+
+        let systemColorSet = {
+            白色: {
+                light: {
+                    startColor: '#c7c7c7',
+                    endColor: '#fff',
+                    fontColor: '#1d1d1d'
+                },
+                dark: {
+                    startColor: '#232323',
+                    endColor: '#5b5d61',
+                    fontColor: '#fff'
+                }
+            },
+            黑色: {
+                light: {
+                    startColor: '#5e627d',
+                    endColor: '#fff',
+                    fontColor: '#1d1d1d'
+                },
+                dark: {
+                    startColor: '#2d2f40',
+                    endColor: '#666878',
+                    fontColor: '#fff'
+                }
+            },
+            蓝色: {
+                light: {
+                    startColor: '#6887d1',
+                    endColor: '#fff',
+                    fontColor: '#1d1d1d'
+                },
+                dark: {
+                    startColor: '#23345e',
+                    endColor: '#526387',
+                    fontColor: '#fff'
+                }
+            }
+        };
+
+        for (const key in systemColorSet) {
+            colorSetPickup.addAction(key);
+        }
+
+        // last index alway be the custom
+        colorSetPickup.addAction('自定义');
+
+        const userSelection = await colorSetPickup.presentAlert();
+
+        // start to get data
+        for (const key in systemColorSet) {
+            if (!systemColorSet[key]) {
+                continue;
+            }
+
+            let index = Object.keys(systemColorSet).indexOf(key);
+            if (index == userSelection) {
+                this.settings['AppColorConfig'] = systemColorSet[key];
+            }
+        }
+
+        if (userSelection >= 3) {
+            this.settings['AppColorConfig'] = await this.colorConfigInput();
+        }
+        // write to local
+        this.saveSettings();
+    }
+
     async colorConfigInput() {
         const bgColorAlert = new Alert();
 
         bgColorAlert.title = '配置背景颜色';
         bgColorAlert.message = '请输入16进制RBG颜色代码, 留空小组件将自动从系统获取';
 
-        bgColorAlert.addTextField('顶部颜色（如#FFFFFF）', this.appColorData['startColor']);
-        bgColorAlert.addTextField('底部颜色（如#FFFFFF）', this.appColorData['endColor']);
-        bgColorAlert.addTextField('字体颜色（如#000000）', this.appColorData['fontColor']);
+        bgColorAlert.addTextField('顶部颜色（如#FFFFFF）', this.appColorData['light']['startColor']);
+        bgColorAlert.addTextField('底部颜色（如#FFFFFF）', this.appColorData['light']['endColor']);
+        bgColorAlert.addTextField('字体颜色（如#000000）', this.appColorData['light']['fontColor']);
 
         bgColorAlert.addAction('确定');
         bgColorAlert.addCancelAction('取消');
@@ -190,16 +284,16 @@ class Widget extends Base {
         const id = await bgColorAlert.presentAlert();
 
         if (id == -1) {
-            return;
+            return this.appColorData;
         }
 
-        this.appColorData['startColor'] = bgColorAlert.textFieldValue(0);
-        this.appColorData['endColor'] = bgColorAlert.textFieldValue(1);
-        this.appColorData['fontColor'] = bgColorAlert.textFieldValue(2);
+        let appColorConfig = {
+            startColor: bgColorAlert.textFieldValue(0),
+            endColor: bgColorAlert.textFieldValue(1),
+            fontColor: bgColorAlert.textFieldValue(2)
+        };
 
-        // write to local
-        this.settings['AppColorConfig'] = this.appColorData;
-        this.saveSettings();
+        return {light: appColorConfig, dark: appColorConfig};
     }
 
     async render() {
@@ -234,7 +328,7 @@ class Widget extends Base {
     }
 
     async getAppLogo() {
-        let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
+        let logoURL = DEFAULT_LOGO_LIGHT;
 
         if (this.userConfigData.custom_logo_image) {
             logoURL = this.userConfigData.custom_logo_image;
@@ -256,8 +350,11 @@ class Widget extends Base {
     }
 
     getFontColor() {
-        if (this.validColorString(this.appColorData.fontColor)) {
-            return new Color(this.appColorData.fontColor, 1);
+        if (this.validColorString(this.appColorData.light.fontColor)) {
+            return Color.dynamic(
+                new Color(this.appColorData['light']['fontColor'], 1),
+                new Color(this.appColorData['dark']['fontColor'], 1)
+            );
         }
         return Color.dynamic(new Color('#2B2B2B', 1), Color.white());
     }
@@ -267,21 +364,34 @@ class Widget extends Base {
 
         let startColor = Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1));
         let endColor = Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1));
-        // if user override
-        if (
-            this.appColorData.startColor != DEFAULT_BG_COLOR_LIGHT ||
-            this.appColorData.endColor != DEFAULT_BG_COLOR_LIGHT
-        ) {
+
+        console.warn(this.appColorData);
+
+        try {
+            // if user override
             if (
-                this.validColorString(this.appColorData.startColor) &&
-                this.validColorString(this.appColorData.endColor)
+                this.appColorData.light.startColor != DEFAULT_BG_COLOR_LIGHT ||
+                this.appColorData.light.endColor != DEFAULT_BG_COLOR_LIGHT
             ) {
-                startColor = new Color(this.appColorData.startColor, 1);
-                endColor = new Color(this.appColorData.endColor, 1);
-                console.warn(this.appColorData.endColor);
+                if (
+                    this.validColorString(this.appColorData['light'].startColor) &&
+                    this.validColorString(this.appColorData['light'].endColor)
+                ) {
+                    startColor = Color.dynamic(
+                        new Color(this.appColorData['light']['startColor'], 1),
+                        new Color(this.appColorData['dark']['startColor'], 1)
+                    );
+
+                    endColor = Color.dynamic(
+                        new Color(this.appColorData['light']['endColor'], 1),
+                        new Color(this.appColorData['dark']['endColor'], 1)
+                    );
+                }
             }
+        } catch (e) {
+            console.error(e.message);
         }
-        console.warn('colors: ' + JSON.stringify(startColor) + JSON.stringify(endColor));
+
         bgColor.colors = [startColor, endColor];
 
         bgColor.locations = [0.0, 1.0];
@@ -301,7 +411,6 @@ class Widget extends Base {
         const width = data.size['small']['width'];
 
         w.setPadding(0, 0, 0, 2);
-        const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
 
         // 第一行右边车辆名称 左边logo
         const topBox = w.addStack();
@@ -320,7 +429,7 @@ class Widget extends Base {
         }
         const carNameText = carNameBox.addText(carName);
         carNameText.leftAlignText();
-        carNameText.font = this.getFont(`${WIDGET_FONT}-DemiBold`, 14);
+        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 14);
         carNameText.textColor = fontColor;
         // ---顶部左边部件完---
 
@@ -328,7 +437,7 @@ class Widget extends Base {
 
         // ---顶部右边部件---
         const topRightBox = topBox.addStack();
-        topRightBox.size = new Size(width * 0.35, 0);
+        topRightBox.size = new Size(0, width * 0.15);
 
         try {
             const logoContainer = topRightBox.addStack();
@@ -336,10 +445,6 @@ class Widget extends Base {
 
             let logoImage = logoContainer.addImage(await this.getAppLogo());
             logoImage.rightAlignImage();
-
-            if (!this.userConfigData.custom_logo_image) {
-                logoImage.tintColor = fontColor;
-            }
         } catch (e) {}
         // ---顶部右边部件完---
 
@@ -352,37 +457,49 @@ class Widget extends Base {
         kmContainer.layoutHorizontally();
         kmContainer.bottomAlignContent();
 
-        const remainKmTxt = kmContainer.addText(`${rangeValue} ${rangeUnits}`);
-        remainKmTxt.font = this.getFont(`${WIDGET_FONT}-Bold`, 14);
-        remainKmTxt.textColor = fontColor;
-        const levelContainer = kmContainer.addStack();
-        levelContainer.setPadding(0, 2, 0, 2);
-        const levelText = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
-        levelText.font = this.getFont(`${WIDGET_FONT}-Regular`, 13);
-        levelText.textColor = fontColor;
-        levelText.textOpacity = 0.7;
+        try {
+            const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
+
+            const remainKmTxt = kmContainer.addText(`${rangeValue} ${rangeUnits}`);
+            remainKmTxt.font = this.getFont(`${WIDGET_FONT_BOLD}`, 14);
+            remainKmTxt.textColor = fontColor;
+            const levelContainer = kmContainer.addStack();
+            levelContainer.setPadding(0, 2, 0, 2);
+            const levelText = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
+            levelText.font = this.getFont(`${WIDGET_FONT}`, 13);
+            levelText.textColor = fontColor;
+            levelText.textOpacity = 0.7;
+        } catch (e) {
+            console.error(e.message);
+            kmContainer.addText(`获取里程失败`);
+        }
 
         const carStatusContainer = carInfoContainer.addStack();
         carStatusContainer.setPadding(2, 0, 0, 0);
-
         const carStatusBox = carStatusContainer.addStack();
         carStatusBox.setPadding(3, 3, 3, 3);
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f1', 0.5), new Color('#2b2b2b', 0.5));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.5), new Color('#444', 0.5));
 
-        const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-        carStatusTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
-        carStatusTxt.textColor = fontColor;
-        carStatusTxt.textOpacity = 0.7;
-        carStatusBox.addSpacer(5);
-        const updateTxt = carStatusBox.addText(
-            `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
-        );
-        updateTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
-        updateTxt.textColor = fontColor;
-        updateTxt.textOpacity = 0.5;
+        try {
+            const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
+            carStatusTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
+            carStatusTxt.textColor = fontColor;
+            carStatusTxt.textOpacity = 0.7;
+            carStatusBox.addSpacer(5);
+            const updateTxt = carStatusBox.addText(
+                `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
+            );
+            updateTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
+            updateTxt.textColor = fontColor;
+            updateTxt.textOpacity = 0.5;
+        } catch (e) {
+            console.error(e.message);
+            carStatusBox.addText(`获取车门状态失败`);
+        }
+
         // ---中间部件完---
 
         w.addSpacer();
@@ -432,7 +549,7 @@ class Widget extends Base {
             carName = this.userConfigData.custom_name;
         }
         const carNameText = carNameContainer.addText(carName);
-        carNameText.font = this.getFont(`${WIDGET_FONT}-DemiBold`, 20);
+        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 20);
         carNameText.textColor = fontColor;
         carNameContainer.addSpacer();
 
@@ -440,27 +557,32 @@ class Widget extends Base {
         kmContainer.setPadding(20, 14, 0, 0);
         kmContainer.bottomAlignContent();
 
-        const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
-        const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
-        kmText.font = this.getFont(`${WIDGET_FONT}-Bold`, 16);
-        kmText.textColor = fontColor;
+        try {
+            const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
+            const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
+            kmText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 16);
+            kmText.textColor = fontColor;
 
-        const levelContainer = kmContainer.addStack();
-        levelContainer.setPadding(0, 4, 0, 0);
-        const levelText = levelContainer.addText(`/${levelValue}${levelUnits}`);
-        levelText.font = this.getFont(`${WIDGET_FONT}-Regular`, 14);
-        levelText.textColor = fontColor;
-        levelText.textOpacity = 0.7;
+            const levelContainer = kmContainer.addStack();
+            levelContainer.setPadding(0, 4, 0, 0);
+            const levelText = levelContainer.addText(`/${levelValue}${levelUnits}`);
+            levelText.font = this.getFont(`${WIDGET_FONT}`, 14);
+            levelText.textColor = fontColor;
+            levelText.textOpacity = 0.7;
 
-        const mileageContainer = leftContainer.addStack();
-        mileageContainer.setPadding(0, 14, 0, 0);
+            const mileageContainer = leftContainer.addStack();
+            mileageContainer.setPadding(0, 14, 0, 0);
 
-        let mileageText = mileageContainer.addText(
-            `总里程: ${data.status.currentMileage.mileage} ${data.status.currentMileage.units}`
-        );
-        mileageText.font = this.getFont(`${WIDGET_FONT}-Regular`, 9);
-        mileageText.textColor = fontColor;
-        mileageText.textOpacity = 0.7;
+            let mileageText = mileageContainer.addText(
+                `总里程: ${data.status.currentMileage.mileage} ${data.status.currentMileage.units}`
+            );
+            mileageText.font = this.getFont(`${WIDGET_FONT}`, 9);
+            mileageText.textColor = fontColor;
+            mileageText.textOpacity = 0.7;
+        } catch (e) {
+            console.error(e.message);
+            kmContainer.addText(`获取里程失败`);
+        }
 
         const carStatusContainer = leftContainer.addStack();
         carStatusContainer.setPadding(8, 14, 0, 0);
@@ -470,18 +592,24 @@ class Widget extends Base {
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f1', 0.5), new Color('#2b2b2b', 0.5));
-        const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-        carStatusTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
-        carStatusTxt.textColor = fontColor;
-        carStatusTxt.textOpacity = 0.7;
-        carStatusBox.addSpacer(5);
-        const updateTxt = carStatusBox.addText(
-            `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
-        );
-        updateTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
-        updateTxt.textColor = fontColor;
-        updateTxt.textOpacity = 0.5;
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.5), new Color('#444', 0.5));
+
+        try {
+            const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
+            carStatusTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
+            carStatusTxt.textColor = fontColor;
+            carStatusTxt.textOpacity = 0.7;
+            carStatusBox.addSpacer(5);
+            const updateTxt = carStatusBox.addText(
+                `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
+            );
+            updateTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
+            updateTxt.textColor = fontColor;
+            updateTxt.textOpacity = 0.5;
+        } catch (e) {
+            console.error(e.message);
+            carStatusBox.addText(`获取车门状态失败`);
+        }
 
         let locationStr = '';
         try {
@@ -494,7 +622,7 @@ class Widget extends Base {
         locationContainer.setPadding(0, 14, 8, 2);
 
         const locationText = locationContainer.addText(locationStr);
-        locationText.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
+        locationText.font = this.getFont(`${WIDGET_FONT}`, 10);
         locationText.textColor = fontColor;
         locationText.textOpacity = 0.5;
         locationText.url = this.buildMapURL(data);
@@ -505,7 +633,7 @@ class Widget extends Base {
         rightContainer.size = new Size(Math.ceil(width * 0.5), height);
 
         const logoImageContainer = rightContainer.addStack();
-        logoImageContainer.size = new Size(0, Math.ceil(height * 0.1));
+        logoImageContainer.size = new Size(0, Math.ceil(height * 0.18));
         logoImageContainer.layoutHorizontally();
 
         logoImageContainer.setPadding(0, 8, 4, 0);
@@ -515,9 +643,6 @@ class Widget extends Base {
         try {
             let logoImage = logoImageContainer.addImage(await this.getAppLogo());
             logoImage.rightAlignImage();
-            if (!this.userConfigData.custom_logo_image) {
-                logoImage.tintColor = fontColor;
-            }
         } catch (e) {}
 
         rightContainer.addSpacer();
@@ -543,7 +668,7 @@ class Widget extends Base {
 
             let windowStatus = `${data.status.doorsAndWindows[0].title} ${data.status.doorsAndWindows[0].state} `;
             let windowStatusText = windowStatusContainer.addText(windowStatus);
-            windowStatusText.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
+            windowStatusText.font = this.getFont(`${WIDGET_FONT}`, 10);
             windowStatusText.textColor = fontColor;
             windowStatusText.textOpacity = 0.5;
 
@@ -926,6 +1051,13 @@ class Widget extends Base {
     }
 
     getFont(fontName, fontSize) {
+        if (fontName == 'SF UI Display') {
+            return Font.systemFont(fontSize);
+        }
+
+        if (fontName == 'SF UI Display Bold') {
+            return Font.semiboldSystemFont(fontSize);
+        }
         return new Font(fontName, fontSize);
     }
 }
