@@ -20,8 +20,8 @@ let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
 let DEFAULT_BG_COLOR_DARK = '#2B2B2B';
-let DEFAULT_LOGO_LIGHT = 'https://z3.ax1x.com/2021/11/01/ICA3WR.png';
-let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICAueU.png';
+let DEFAULT_LOGO_LIGHT = 'https://z3.ax1x.com/2021/11/01/ICa7g1.png';
+let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICaqu6.png';
 
 // header is might be used for preventing the bmw block the external api?
 let BMW_HEADERS = {
@@ -414,21 +414,19 @@ class Widget extends Base {
         w.backgroundGradient = this.getBackgroundColor();
 
         const width = data.size['small']['width'];
-        const paddingLeft = Math.round(width * 0.01);
-        console.warn('left:' + paddingLeft);
+        const paddingLeft = Math.round(width * 0.07);
 
-        w.setPadding(0, 0, 0, 2);
+        w.setPadding(0, 0, 0, 0);
 
-        // 第一行右边车辆名称 左边logo
         const topBox = w.addStack();
         topBox.layoutHorizontally();
-        topBox.setPadding(6, 12, 0, 0);
+        topBox.setPadding(0, 0, 0, 0);
 
         // ---顶部左边部件---
-        const topleftContainer = topBox.addStack();
-        const carNameBox = topleftContainer.addStack();
+        const topLeftContainer = topBox.addStack();
 
-        carNameBox.setPadding(0, 0, 0, 0);
+        const carNameBox = topLeftContainer.addStack();
+        carNameBox.setPadding(paddingLeft, paddingLeft, 0, 0);
 
         let carName = `${data.brand} ${data.model}`;
         if (this.userConfigData.custom_name.length > 0) {
@@ -436,7 +434,7 @@ class Widget extends Base {
         }
         const carNameText = carNameBox.addText(carName);
         carNameText.leftAlignText();
-        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 14);
+        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 20);
         carNameText.textColor = fontColor;
         // ---顶部左边部件完---
 
@@ -444,13 +442,11 @@ class Widget extends Base {
 
         // ---顶部右边部件---
         const topRightBox = topBox.addStack();
-        topRightBox.size = new Size(0, Math.round(width * 0.07));
+        topRightBox.size = new Size(0, Math.round(width * 0.17));
+        topRightBox.setPadding(paddingLeft - 1, 0, 0, paddingLeft - 1);
 
         try {
-            const logoContainer = topRightBox.addStack();
-            logoContainer.setPadding(0, 0, 0, 6);
-
-            let logoImage = logoContainer.addImage(await this.getAppLogo());
+            let logoImage = topRightBox.addImage(await this.getAppLogo());
             logoImage.rightAlignImage();
         } catch (e) {}
         // ---顶部右边部件完---
@@ -458,7 +454,7 @@ class Widget extends Base {
         // ---中间部件---
         const carInfoContainer = w.addStack();
         carInfoContainer.layoutVertically();
-        carInfoContainer.setPadding(14, 12, 0, 0);
+        carInfoContainer.setPadding(8, paddingLeft, 0, 0);
 
         const kmContainer = carInfoContainer.addStack();
         kmContainer.layoutHorizontally();
@@ -466,16 +462,20 @@ class Widget extends Base {
 
         try {
             const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
+            const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
+            kmText.font = this.getFont(`${WIDGET_FONT}`, 17);
+            kmText.textColor = fontColor;
 
-            const remainKmTxt = kmContainer.addText(`${rangeValue} ${rangeUnits}`);
-            remainKmTxt.font = this.getFont(`${WIDGET_FONT_BOLD}`, 14);
-            remainKmTxt.textColor = fontColor;
             const levelContainer = kmContainer.addStack();
-            levelContainer.setPadding(0, 2, 0, 2);
-            const levelText = levelContainer.addText(`/ ${levelValue}${levelUnits}`);
-            levelText.font = this.getFont(`${WIDGET_FONT}`, 13);
+            const separator = levelContainer.addText(' / ');
+            separator.font = this.getFont(`${WIDGET_FONT}`, 12);
+            separator.textColor = fontColor;
+            separator.textOpacity = 0.6;
+
+            const levelText = levelContainer.addText(`${levelValue}${levelUnits}`);
+            levelText.font = this.getFont(`${WIDGET_FONT}`, 14);
             levelText.textColor = fontColor;
-            levelText.textOpacity = 0.7;
+            levelText.textOpacity = 0.6;
         } catch (e) {
             console.error(e.message);
             kmContainer.addText(`获取里程失败`);
@@ -483,6 +483,7 @@ class Widget extends Base {
 
         const carStatusContainer = carInfoContainer.addStack();
         carStatusContainer.setPadding(2, 0, 0, 0);
+
         const carStatusBox = carStatusContainer.addStack();
         carStatusBox.setPadding(3, 3, 3, 3);
         carStatusBox.layoutHorizontally();
@@ -496,14 +497,14 @@ class Widget extends Base {
             carStatusTxt.textColor = fontColor;
             carStatusTxt.textOpacity = 0.7;
             carStatusBox.addSpacer(5);
-            const updateTxt = carStatusBox.addText(
-                `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
-            );
+
+            let statusLabel = this.formatStatusLabel(data);
+            const updateTxt = carStatusBox.addText(statusLabel);
             updateTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
             updateTxt.textColor = fontColor;
             updateTxt.textOpacity = 0.5;
         } catch (e) {
-            console.error(e.message);
+            console.error(e);
             carStatusBox.addText(`获取车门状态失败`);
         }
 
@@ -514,7 +515,7 @@ class Widget extends Base {
         // ---底部部件---
         const bottomBox = w.addStack();
 
-        bottomBox.setPadding(8, 12, 12, 10); // 图片的边距
+        bottomBox.setPadding(2, 12, 8, 10); // 图片的边距
         bottomBox.addSpacer();
 
         const carImageBox = bottomBox.addStack();
@@ -628,9 +629,9 @@ class Widget extends Base {
             carStatusTxt.textColor = fontColor;
             carStatusTxt.textOpacity = 0.7;
             carStatusBox.addSpacer(5);
-            const updateTxt = carStatusBox.addText(
-                `${data.status.timestampMessage.replace('已从车辆更新', '').split(' ')[1] + '更新'}`
-            );
+
+            let statusLabel = this.formatStatusLabel(data);
+            const updateTxt = carStatusBox.addText(statusLabel);
             updateTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
             updateTxt.textColor = fontColor;
             updateTxt.textOpacity = 0.5;
@@ -787,6 +788,19 @@ class Widget extends Base {
         }
 
         return `http://maps.apple.com/?address=${encodeURI(locationStr)}&ll=${latLng}&t=m`;
+    }
+
+    formatStatusLabel(data) {
+        if (!data.status || !data.status.lastUpdatedAt) {
+            return '';
+        }
+
+        let dateFormatter = new DateFormatter();
+        dateFormatter.dateFormat = 'MM-dd HH:mm';
+
+        let dateStr = dateFormatter.string(new Date(data.status.lastUpdatedAt));
+
+        return `${dateStr}更新`;
     }
 
     async getData() {
