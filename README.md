@@ -17,3 +17,6 @@
 
 ### 特别鸣谢
 感谢胡总、吹雪和部分群友，提供思路帮助与测试
+
+### License
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
