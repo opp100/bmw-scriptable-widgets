@@ -6,7 +6,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app"
+    "start": "node app",
+    "build": "node pack Scripts/「源码」bmw-linker.js"
   },
   "author": "",
   "license": "ISC",
