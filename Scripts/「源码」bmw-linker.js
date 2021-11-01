@@ -497,7 +497,7 @@ class Widget extends Base {
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f5f5f8', 0.5), new Color('#444', 0.5));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f5f5f8', 0.5), new Color('#fff', 0.2));
 
         try {
             const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
@@ -629,7 +629,7 @@ class Widget extends Base {
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f5f5f8', 0.7), new Color('#444', 0.5));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f5f5f8', 0.7), new Color('#fff', 0.2));
 
         try {
             const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
