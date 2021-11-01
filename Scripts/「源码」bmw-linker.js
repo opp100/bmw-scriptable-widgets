@@ -414,6 +414,8 @@ class Widget extends Base {
         w.backgroundGradient = this.getBackgroundColor();
 
         const width = data.size['small']['width'];
+        const paddingLeft = Math.round(width * 0.01);
+        console.warn('left:' + paddingLeft);
 
         w.setPadding(0, 0, 0, 2);
 
@@ -442,7 +444,7 @@ class Widget extends Base {
 
         // ---顶部右边部件---
         const topRightBox = topBox.addStack();
-        topRightBox.size = new Size(0, width * 0.15);
+        topRightBox.size = new Size(0, Math.round(width * 0.07));
 
         try {
             const logoContainer = topRightBox.addStack();
@@ -538,7 +540,7 @@ class Widget extends Base {
         w.setPadding(0, 0, 0, 0);
         const {width, height} = data.size['medium'];
 
-        let paddingTop = Math.round(height * 0.09);;
+        let paddingTop = Math.round(height * 0.09);
         let paddingLeft = Math.round(width * 0.055);
 
         const topContainer = w.addStack();
