@@ -29,14 +29,17 @@ let BMW_HEADERS = {
     'x-user-agent': 'ios(15.0.2);bmw;1.6.6(10038)',
     host: 'myprofile.bmw.com.cn'
 };
-class Widget extends Base {
-    // setup local storage keys
-    MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
-    MY_BMW_TOKEN = 'MY_BMW_TOKEN';
-    MY_BMW_UPDATE_LAST_AT = 'MY_BMW_UPDATE_LAST_AT';
-    MY_BMW_LAST_CHECK_IN = 'MY_BMW_LAST_CHECK_IN';
-    MY_BMW_AGREE = 'MY_BMW_AGREE';
 
+// setup local storage keys
+let MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
+let MY_BMW_TOKEN = 'MY_BMW_TOKEN';
+let MY_BMW_TOKEN_UPDATE_LAST_AT = 'MY_BMW_TOKEN_UPDATE_LAST_AT';
+let MY_BMW_LAST_CHECK_IN = 'MY_BMW_LAST_CHECK_IN';
+let APP_USE_AGREEMENT = 'APP_USE_AGREEMENT';
+let MY_BMW_VEHICLE_UPDATE_LAST_AT = 'MY_BMW_VEHICLE_UPDATE_LAST_AT';
+let MY_BMW_VEHICLE_DATA = 'MY_BMW_VEHICLE_DATA';
+
+class Widget extends Base {
     DeviceSize = {
         '428x926': {
             small: {width: 176, height: 176},
@@ -130,13 +133,13 @@ class Widget extends Base {
         confirmationAlert.addAction('同意');
         confirmationAlert.addCancelAction('不同意');
 
-        const idb = await confirmationAlert.presentAlert();
-        if (idb == -1) {
+        const userSelection = await confirmationAlert.presentAlert();
+        if (userSelection == -1) {
             console.log('User denied');
-            Keychain.set(this.MY_BMW_AGREE, 'false');
+            Keychain.set(APP_USE_AGREEMENT, 'false');
             return;
         } else {
-            Keychain.set(this.MY_BMW_AGREE, 'true');
+            Keychain.set(APP_USE_AGREEMENT, 'true');
         }
 
         await this.userConfigInput();
@@ -535,8 +538,8 @@ class Widget extends Base {
         w.setPadding(0, 0, 0, 0);
         const {width, height} = data.size['medium'];
 
-        let paddingTop = 12;
-        let paddingLeft = 16;
+        let paddingTop = Math.round(height * 0.09);;
+        let paddingLeft = Math.round(width * 0.055);
 
         const topContainer = w.addStack();
         topContainer.layoutHorizontally();
@@ -544,20 +547,17 @@ class Widget extends Base {
         const carNameContainer = topContainer.addStack();
         carNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
 
-        let carName = `${data.brand} ${data.model} ${data.bodyType}`;
+        let carName = `${data.brand} ${data.model}`;
         if (this.userConfigData.custom_name.length > 0) {
             carName = this.userConfigData.custom_name;
         }
         const carNameText = carNameContainer.addText(carName);
-        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 22);
+        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 24);
         carNameText.textColor = fontColor;
 
         const logoImageContainer = topContainer.addStack();
-
         logoImageContainer.layoutHorizontally();
-
-        logoImageContainer.setPadding(paddingTop, 0, 0, 16);
-
+        logoImageContainer.setPadding(paddingTop, 0, 0, paddingTop);
         logoImageContainer.addSpacer();
 
         try {
@@ -573,9 +573,11 @@ class Widget extends Base {
         leftContainer.layoutVertically();
         leftContainer.size = new Size(width * 0.55, Math.ceil(height * 0.75));
 
+        leftContainer.addSpacer();
+
         const kmContainer = leftContainer.addStack();
-        kmContainer.setPadding(8, paddingLeft, 0, 0);
-        kmContainer.centerAlignContent();
+        kmContainer.setPadding(0, paddingLeft, 0, 0);
+        kmContainer.bottomAlignContent();
 
         try {
             const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
@@ -584,10 +586,15 @@ class Widget extends Base {
             kmText.textColor = fontColor;
 
             const levelContainer = kmContainer.addStack();
-            const levelText = levelContainer.addText(` / ${levelValue}${levelUnits}`);
-            levelText.font = this.getFont(`${WIDGET_FONT}`, 14);
+            const separator = levelContainer.addText(' / ');
+            separator.font = this.getFont(`${WIDGET_FONT}`, 13);
+            separator.textColor = fontColor;
+            separator.textOpacity = 0.6;
+
+            const levelText = levelContainer.addText(`${levelValue}${levelUnits}`);
+            levelText.font = this.getFont(`${WIDGET_FONT}`, 17);
             levelText.textColor = fontColor;
-            levelText.textOpacity = 0.7;
+            levelText.textOpacity = 0.6;
 
             const mileageContainer = leftContainer.addStack();
             mileageContainer.setPadding(0, paddingLeft, 0, 0);
@@ -638,7 +645,7 @@ class Widget extends Base {
         leftContainer.addSpacer();
 
         const locationContainer = leftContainer.addStack();
-        locationContainer.setPadding(0, paddingLeft, 8, 2);
+        locationContainer.setPadding(0, paddingLeft, 16, Math.ceil(width * 0.1));
 
         const locationText = locationContainer.addText(locationStr);
         locationText.font = this.getFont(`${WIDGET_FONT}`, 10);
@@ -654,7 +661,7 @@ class Widget extends Base {
         rightContainer.addSpacer();
 
         const carImageContainer = rightContainer.addStack();
-        carImageContainer.setPadding(0, 0, 8, 10);
+        carImageContainer.setPadding(0, 0, 10, paddingTop);
         carImageContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.45));
 
         carImageContainer.bottomAlignContent();
@@ -667,7 +674,7 @@ class Widget extends Base {
 
         if (data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
             let windowStatusContainer = rightContainer.addStack();
-            windowStatusContainer.setPadding(0, 0, 12, 0);
+            windowStatusContainer.setPadding(0, 0, 16, 0);
 
             windowStatusContainer.layoutHorizontally();
             windowStatusContainer.addSpacer();
@@ -811,15 +818,15 @@ class Widget extends Base {
 
     async getAccessToken() {
         let accessToken = '';
-        if (Keychain.contains(this.MY_BMW_UPDATE_LAST_AT)) {
-            let lastUpdate = parseInt(Keychain.get(this.MY_BMW_UPDATE_LAST_AT));
+        if (Keychain.contains(MY_BMW_TOKEN_UPDATE_LAST_AT)) {
+            let lastUpdate = parseInt(Keychain.get(MY_BMW_TOKEN_UPDATE_LAST_AT));
             if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
-                if (Keychain.contains(this.MY_BMW_TOKEN)) {
-                    accessToken = Keychain.get(this.MY_BMW_TOKEN);
+                if (Keychain.contains(MY_BMW_TOKEN)) {
+                    accessToken = Keychain.get(MY_BMW_TOKEN);
                 }
             } else {
-                if (Keychain.contains(this.MY_BMW_REFRESH_TOKEN)) {
-                    let refreshToken = Keychain.get(this.MY_BMW_REFRESH_TOKEN);
+                if (Keychain.contains(MY_BMW_REFRESH_TOKEN)) {
+                    let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
                     // get refresh token
                     accessToken = await this.refreshToken(refreshToken);
                 }
@@ -838,9 +845,9 @@ class Widget extends Base {
 
             accessToken = access_token;
             try {
-                Keychain.set(this.MY_BMW_UPDATE_LAST_AT, String(new Date().valueOf()));
-                Keychain.set(this.MY_BMW_TOKEN, accessToken);
-                Keychain.set(this.MY_BMW_REFRESH_TOKEN, refresh_token);
+                Keychain.set(MY_BMW_TOKEN_UPDATE_LAST_AT, String(new Date().valueOf()));
+                Keychain.set(MY_BMW_TOKEN, accessToken);
+                Keychain.set(MY_BMW_REFRESH_TOKEN, refresh_token);
             } catch (e) {
                 console.error(e.message);
             }
@@ -913,10 +920,10 @@ class Widget extends Base {
         if (res.access_token !== undefined) {
             const {access_token, refresh_token} = res;
 
-            Keychain.set(this.MY_BMW_TOKEN, access_token);
-            Keychain.set(this.MY_BMW_REFRESH_TOKEN, refresh_token);
+            Keychain.set(MY_BMW_TOKEN, access_token);
+            Keychain.set(MY_BMW_REFRESH_TOKEN, refresh_token);
 
-            Keychain.set(this.MY_BMW_UPDATE_LAST_AT, String(new Date().valueOf()));
+            Keychain.set(MY_BMW_TOKEN_UPDATE_LAST_AT, String(new Date().valueOf()));
 
             return access_token;
         } else {
@@ -925,6 +932,27 @@ class Widget extends Base {
     }
 
     async getVehicleDetails(access_token) {
+        let vehicleData = null;
+
+        // skip update prevent access to bmw too much
+        try {
+            if (Keychain.contains(MY_BMW_VEHICLE_UPDATE_LAST_AT) && Keychain.contains(MY_BMW_VEHICLE_DATA)) {
+                let lastUpdate = parseInt(Keychain.get(MY_BMW_VEHICLE_UPDATE_LAST_AT));
+                console.warn(lastUpdate);
+
+                vehicleData = JSON.parse(Keychain.get(MY_BMW_VEHICLE_DATA));
+
+                // load data every 5 mins
+                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 5 && vehicleData && vehicleData.vin) {
+                    console.log('Get vehicle data from cache');
+
+                    return vehicleData;
+                }
+            }
+        } catch (e) {
+            console.warn('Load vehicle from cache failed');
+        }
+
         console.log('Start to get vehicle details');
         let req = new Request(
             BMW_SERVER_HOST + `/eadrax-vcs/v1/vehicles?apptimezone=480&appDateTime=${new Date().valueOf()}`
@@ -950,26 +978,30 @@ class Widget extends Base {
                 if (vehicleFound) {
                     console.log('VIN matched and found');
 
-                    return vehicleFound;
+                    vehicleData = vehicleFound;
                 }
             }
 
+            vehicleData = vehicles[0];
+
+            Keychain.set(MY_BMW_VEHICLE_UPDATE_LAST_AT, String(new Date().valueOf()));
+            Keychain.set(MY_BMW_VEHICLE_DATA, JSON.stringify(vehicleData));
             return vehicles[0];
-        } else {
-            console.error('Load vehicle failed');
-            return null;
         }
+
+        console.error('Load vehicle failed');
+        return null;
     }
 
     async checkInDaily(access_token) {
         // TODO: set check in during hours in the day
         let dateFormatter = new DateFormatter();
-        const lastCheckIn = Keychain.get(this.MY_BMW_LAST_CHECK_IN);
+        const lastCheckIn = Keychain.get(MY_BMW_LAST_CHECK_IN);
 
         dateFormatter.dateFormat = 'yyyy-MM-dd';
         let today = dateFormatter.string(new Date());
 
-        if (Keychain.contains(this.MY_BMW_LAST_CHECK_IN)) {
+        if (Keychain.contains(MY_BMW_LAST_CHECK_IN)) {
             console.log('last checked in at: ' + lastCheckIn);
 
             if (lastCheckIn == today) {
@@ -991,7 +1023,7 @@ class Widget extends Base {
         req.body = JSON.stringify({signDate: null});
 
         const res = await req.loadJSON();
-        Keychain.set(this.MY_BMW_LAST_CHECK_IN, today);
+        Keychain.set(MY_BMW_LAST_CHECK_IN, today);
 
         console.log(res);
 
@@ -1014,8 +1046,8 @@ class Widget extends Base {
 
         try {
             let access_token = '';
-            if (Keychain.contains(this.MY_BMW_TOKEN)) {
-                access_token = Keychain.get(this.MY_BMW_TOKEN);
+            if (Keychain.contains(MY_BMW_TOKEN)) {
+                access_token = Keychain.get(MY_BMW_TOKEN);
             } else {
                 throw new Error('没有token');
             }
