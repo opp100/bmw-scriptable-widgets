@@ -425,17 +425,25 @@ class Widget extends Base {
         // ---顶部左边部件---
         const topLeftContainer = topBox.addStack();
 
-        const carNameBox = topLeftContainer.addStack();
-        carNameBox.setPadding(paddingLeft, paddingLeft, 0, 0);
+        const vehicleNameContainer = topLeftContainer.addStack();
+        vehicleNameContainer.setPadding(paddingLeft, paddingLeft, 0, 0);
 
-        let carName = `${data.brand} ${data.model}`;
+        let vehicleNameStr = `${data.brand} ${data.model}`;
         if (this.userConfigData.custom_name.length > 0) {
-            carName = this.userConfigData.custom_name;
+            vehicleNameStr = this.userConfigData.custom_name;
         }
-        const carNameText = carNameBox.addText(carName);
-        carNameText.leftAlignText();
-        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 20);
-        carNameText.textColor = fontColor;
+        const vehicleNameText = vehicleNameContainer.addText(vehicleNameStr);
+
+        // get dynamic size
+        let vehicleNameSize = 20;
+
+        if (vehicleNameStr.length > 10) {
+            vehicleNameSize = vehicleNameSize - Math.round(vehicleNameStr.length / 4);
+        }
+
+        vehicleNameText.leftAlignText();
+        vehicleNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, vehicleNameSize);
+        vehicleNameText.textColor = fontColor;
         // ---顶部左边部件完---
 
         topBox.addSpacer();
@@ -547,16 +555,16 @@ class Widget extends Base {
         const topContainer = w.addStack();
         topContainer.layoutHorizontally();
 
-        const carNameContainer = topContainer.addStack();
-        carNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
+        const vehicleNameContainer = topContainer.addStack();
+        vehicleNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
 
-        let carName = `${data.brand} ${data.model}`;
+        let vehicleName = `${data.brand} ${data.model}`;
         if (this.userConfigData.custom_name.length > 0) {
-            carName = this.userConfigData.custom_name;
+            vehicleName = this.userConfigData.custom_name;
         }
-        const carNameText = carNameContainer.addText(carName);
-        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 24);
-        carNameText.textColor = fontColor;
+        const vehicleNameText = vehicleNameContainer.addText(vehicleName);
+        vehicleNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 24);
+        vehicleNameText.textColor = fontColor;
 
         const logoImageContainer = topContainer.addStack();
         logoImageContainer.layoutHorizontally();
