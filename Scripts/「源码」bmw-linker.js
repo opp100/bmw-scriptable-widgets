@@ -20,8 +20,8 @@ let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
 let DEFAULT_BG_COLOR_DARK = '#2B2B2B';
-let DEFAULT_LOGO_LIGHT = 'https://z3.ax1x.com/2021/11/01/ICPAKS.png';
-let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICPAKS.png';
+let DEFAULT_LOGO_LIGHT = 'https://z3.ax1x.com/2021/11/01/ICA3WR.png';
+let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICAueU.png';
 
 // header is might be used for preventing the bmw block the external api?
 let BMW_HEADERS = {
@@ -125,7 +125,7 @@ class Widget extends Base {
         const confirmationAlert = new Alert();
 
         confirmationAlert.title = '郑重声明';
-        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n本组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号`;
+        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关`;
 
         confirmationAlert.addAction('同意');
         confirmationAlert.addCancelAction('不同意');
@@ -330,6 +330,12 @@ class Widget extends Base {
     async getAppLogo() {
         let logoURL = DEFAULT_LOGO_LIGHT;
 
+        // not load dynamically have to re add the widget
+        let darkModel = Device.isUsingDarkAppearance();
+        if (darkModel) {
+            logoURL = DEFAULT_LOGO_DARK;
+        }
+
         if (this.userConfigData.custom_logo_image) {
             logoURL = this.userConfigData.custom_logo_image;
         }
@@ -339,10 +345,8 @@ class Widget extends Base {
 
     async renderError(errMsg) {
         let w = new ListWidget();
-        const bgColor = new LinearGradient();
-        bgColor.colors = [new Color('#1c1c1c'), new Color('#29323c')];
-        bgColor.locations = [0.0, 1.0];
-        w.backgroundGradient = bgColor;
+        w.backgroundGradient = this.getBackgroundColor();
+
         const padding = 16;
         w.setPadding(padding, padding, padding, padding);
         w.addStack().addText(errMsg);
@@ -364,8 +368,6 @@ class Widget extends Base {
 
         let startColor = Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1));
         let endColor = Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1));
-
-        console.warn(this.appColorData);
 
         try {
             // if user override
@@ -481,7 +483,7 @@ class Widget extends Base {
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.5), new Color('#444', 0.5));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f5f5f8', 0.5), new Color('#444', 0.5));
 
         try {
             const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
@@ -533,45 +535,62 @@ class Widget extends Base {
         w.setPadding(0, 0, 0, 0);
         const {width, height} = data.size['medium'];
 
-        const bodyContainer = w.addStack();
-        bodyContainer.setPadding(0, 0, 0, 0);
-        bodyContainer.layoutHorizontally();
+        let paddingTop = 12;
+        let paddingLeft = 16;
 
-        const leftContainer = bodyContainer.addStack();
-        leftContainer.layoutVertically();
-        leftContainer.size = new Size(width * 0.5, height);
+        const topContainer = w.addStack();
+        topContainer.layoutHorizontally();
 
-        const carNameContainer = leftContainer.addStack();
-        carNameContainer.setPadding(8, 14, 0, 0);
+        const carNameContainer = topContainer.addStack();
+        carNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
 
         let carName = `${data.brand} ${data.model} ${data.bodyType}`;
         if (this.userConfigData.custom_name.length > 0) {
             carName = this.userConfigData.custom_name;
         }
         const carNameText = carNameContainer.addText(carName);
-        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 20);
+        carNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 22);
         carNameText.textColor = fontColor;
-        carNameContainer.addSpacer();
+
+        const logoImageContainer = topContainer.addStack();
+
+        logoImageContainer.layoutHorizontally();
+
+        logoImageContainer.setPadding(paddingTop, 0, 0, 16);
+
+        logoImageContainer.addSpacer();
+
+        try {
+            let logoImage = logoImageContainer.addImage(await this.getAppLogo());
+            logoImage.rightAlignImage();
+        } catch (e) {}
+
+        const bodyContainer = w.addStack();
+        bodyContainer.layoutHorizontally();
+
+        const leftContainer = bodyContainer.addStack();
+
+        leftContainer.layoutVertically();
+        leftContainer.size = new Size(width * 0.55, Math.ceil(height * 0.75));
 
         const kmContainer = leftContainer.addStack();
-        kmContainer.setPadding(20, 14, 0, 0);
-        kmContainer.bottomAlignContent();
+        kmContainer.setPadding(8, paddingLeft, 0, 0);
+        kmContainer.centerAlignContent();
 
         try {
             const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
             const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
-            kmText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 16);
+            kmText.font = this.getFont(`${WIDGET_FONT}`, 20);
             kmText.textColor = fontColor;
 
             const levelContainer = kmContainer.addStack();
-            levelContainer.setPadding(0, 4, 0, 0);
-            const levelText = levelContainer.addText(`/${levelValue}${levelUnits}`);
+            const levelText = levelContainer.addText(` / ${levelValue}${levelUnits}`);
             levelText.font = this.getFont(`${WIDGET_FONT}`, 14);
             levelText.textColor = fontColor;
             levelText.textOpacity = 0.7;
 
             const mileageContainer = leftContainer.addStack();
-            mileageContainer.setPadding(0, 14, 0, 0);
+            mileageContainer.setPadding(0, paddingLeft, 0, 0);
 
             let mileageText = mileageContainer.addText(
                 `总里程: ${data.status.currentMileage.mileage} ${data.status.currentMileage.units}`
@@ -585,14 +604,14 @@ class Widget extends Base {
         }
 
         const carStatusContainer = leftContainer.addStack();
-        carStatusContainer.setPadding(8, 14, 0, 0);
+        carStatusContainer.setPadding(8, paddingLeft, 0, 0);
 
         const carStatusBox = carStatusContainer.addStack();
         carStatusBox.setPadding(3, 3, 3, 3);
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.5), new Color('#444', 0.5));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f5f5f8', 0.7), new Color('#444', 0.5));
 
         try {
             const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
@@ -619,7 +638,7 @@ class Widget extends Base {
         leftContainer.addSpacer();
 
         const locationContainer = leftContainer.addStack();
-        locationContainer.setPadding(0, 14, 8, 2);
+        locationContainer.setPadding(0, paddingLeft, 8, 2);
 
         const locationText = locationContainer.addText(locationStr);
         locationText.font = this.getFont(`${WIDGET_FONT}`, 10);
@@ -628,28 +647,15 @@ class Widget extends Base {
         locationText.url = this.buildMapURL(data);
 
         const rightContainer = bodyContainer.addStack();
-        rightContainer.setPadding(8, 0, 0, 8);
+        rightContainer.setPadding(8, 0, 0, 12);
         rightContainer.layoutVertically();
-        rightContainer.size = new Size(Math.ceil(width * 0.5), height);
-
-        const logoImageContainer = rightContainer.addStack();
-        logoImageContainer.size = new Size(0, Math.ceil(height * 0.18));
-        logoImageContainer.layoutHorizontally();
-
-        logoImageContainer.setPadding(0, 8, 4, 0);
-
-        logoImageContainer.addSpacer();
-
-        try {
-            let logoImage = logoImageContainer.addImage(await this.getAppLogo());
-            logoImage.rightAlignImage();
-        } catch (e) {}
+        rightContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.75));
 
         rightContainer.addSpacer();
 
         const carImageContainer = rightContainer.addStack();
-        carImageContainer.setPadding(0, 0, 0, 8);
-        carImageContainer.size = new Size(Math.ceil(width * 0.5), Math.ceil(height * 0.45));
+        carImageContainer.setPadding(0, 0, 8, 10);
+        carImageContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.45));
 
         carImageContainer.bottomAlignContent();
 
@@ -661,7 +667,7 @@ class Widget extends Base {
 
         if (data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
             let windowStatusContainer = rightContainer.addStack();
-            windowStatusContainer.setPadding(0, 0, 8, 0);
+            windowStatusContainer.setPadding(0, 0, 12, 0);
 
             windowStatusContainer.layoutHorizontally();
             windowStatusContainer.addSpacer();
