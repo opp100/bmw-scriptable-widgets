@@ -12,7 +12,7 @@ if (typeof require === 'undefined') require = importModule;
 const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
-let WIDGET_VERSION = 'v1.6';
+let WIDGET_VERSION = 'v1.7';
 let WIDGET_FONT = 'AvenirNext';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
 
@@ -71,7 +71,7 @@ class Widget extends Base {
         }
     };
 
-    defaultData = {
+    userConfigData = {
         username: '',
         password: '',
         custom_name: '',
@@ -81,29 +81,35 @@ class Widget extends Base {
         map_api_key: null
     };
 
+    appColorData = {
+        startColor: DEFAULT_BG_COLOR_LIGHT,
+        endColor: DEFAULT_BG_COLOR_LIGHT,
+        fontColor: null
+    };
+
     constructor(arg) {
         super(arg);
         this.name = 'My BMW';
         this.desc = '宝马互联App小组件';
-        this.configKeyName = 'UserConfig';
 
-        this.defaultData = {...this.defaultData, ...this.settings[this.configKeyName]};
+        this.userConfigData = {...this.userConfigData, ...this.settings['UserConfig']};
+        this.appColorData = {...this.appColorData, ...this.settings['AppColorConfig']};
 
         if (config.runsInApp) {
-            this.registerAction('配置用户', this.setWidgetUserConfig);
+            this.registerAction('配置小组件', this.setWidgetConfig);
         }
     }
 
-    async setWidgetUserConfig() {
-        const b = new Alert();
+    async setWidgetConfig() {
+        const confirmationAlert = new Alert();
 
-        b.title = '郑重声明';
-        b.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n本组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号`;
+        confirmationAlert.title = '郑重声明';
+        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n本组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号`;
 
-        b.addAction('同意');
-        b.addCancelAction('不同意');
+        confirmationAlert.addAction('同意');
+        confirmationAlert.addCancelAction('不同意');
 
-        const idb = await b.presentAlert();
+        const idb = await confirmationAlert.presentAlert();
         if (idb == -1) {
             console.log('User denied');
             Keychain.set(this.MY_BMW_AGREE, 'false');
@@ -112,19 +118,37 @@ class Widget extends Base {
             Keychain.set(this.MY_BMW_AGREE, 'true');
         }
 
+        await this.userConfigInput();
+        await this.colorConfigInput();
+    }
+
+    async userConfigInput() {
         const userInfoAlert = new Alert();
-        userInfoAlert.title = 'My BMW';
+        userInfoAlert.title = '配置小组件';
         userInfoAlert.message = '配置My BMW账号密码';
 
-        userInfoAlert.addTextField('账号86+您的电话', this.defaultData.username);
-        userInfoAlert.addSecureTextField('密码（不要有特殊字符）', this.defaultData.password);
-        userInfoAlert.addTextField('自定义车名', this.defaultData.custom_name);
-        userInfoAlert.addTextField('自定义车辆图片（URL）', this.defaultData.custom_vehicle_image);
-        userInfoAlert.addTextField('自定义LOGO（URL）', this.defaultData.custom_logo_image);
-        userInfoAlert.addTextField('车架号(多辆BMW时填写)', this.defaultData.vin);
+        // refer to default config
+        let configSet = {
+            username: '账号86+您的电话',
+            password: '密码（不要有特殊字符）',
+            custom_name: '自定义车名',
+            custom_vehicle_image: '自定义车辆图片（URL）',
+            custom_logo_image: '自定义LOGO（URL）',
+            vin: '车架号(多辆BMW时填写)',
+            map_api_key: '高德地图API_KEY'
+        };
 
-        // TODO: support different map api and start up with different map app
-        userInfoAlert.addTextField('高德API(选填)', this.defaultData.map_api_key);
+        for (const key in configSet) {
+            if (!configSet[key] || !this.userConfigData.hasOwnProperty(key)) {
+                continue;
+            }
+
+            if (key == 'password') {
+                userInfoAlert.addSecureTextField(configSet[key], this.userConfigData[key]);
+                continue;
+            }
+            userInfoAlert.addTextField(configSet[key], this.userConfigData[key]);
+        }
 
         userInfoAlert.addAction('确定');
         userInfoAlert.addCancelAction('取消');
@@ -136,22 +160,51 @@ class Widget extends Base {
         }
 
         // start to get data
-        this.defaultData.username = userInfoAlert.textFieldValue(0);
-        this.defaultData.password = userInfoAlert.textFieldValue(1);
-        this.defaultData.custom_name = userInfoAlert.textFieldValue(2);
-        this.defaultData.custom_vehicle_image = userInfoAlert.textFieldValue(3);
-        this.defaultData.custom_logo_image = userInfoAlert.textFieldValue(4);
-        this.defaultData.vin = userInfoAlert.textFieldValue(5);
-        this.defaultData.map_api_key = userInfoAlert.textFieldValue(6);
+        for (const key in configSet) {
+            if (!configSet[key] || !this.userConfigData.hasOwnProperty(key)) {
+                continue;
+            }
+
+            let index = Object.keys(configSet).indexOf(key);
+            this.userConfigData[key] = userInfoAlert.textFieldValue(index);
+        }
 
         // write to local
-        this.settings[this.configKeyName] = this.defaultData;
+        this.settings['UserConfig'] = this.userConfigData;
+        this.saveSettings();
+    }
+
+    async colorConfigInput() {
+        const bgColorAlert = new Alert();
+
+        bgColorAlert.title = '配置背景颜色';
+        bgColorAlert.message = '请输入16进制RBG颜色代码, 留空小组件将自动从系统获取';
+
+        bgColorAlert.addTextField('顶部颜色（如#FFFFFF）', this.appColorData['startColor']);
+        bgColorAlert.addTextField('底部颜色（如#FFFFFF）', this.appColorData['endColor']);
+        bgColorAlert.addTextField('字体颜色（如#000000）', this.appColorData['fontColor']);
+
+        bgColorAlert.addAction('确定');
+        bgColorAlert.addCancelAction('取消');
+
+        const id = await bgColorAlert.presentAlert();
+
+        if (id == -1) {
+            return;
+        }
+
+        this.appColorData['startColor'] = bgColorAlert.textFieldValue(0);
+        this.appColorData['endColor'] = bgColorAlert.textFieldValue(1);
+        this.appColorData['fontColor'] = bgColorAlert.textFieldValue(2);
+
+        // write to local
+        this.settings['AppColorConfig'] = this.appColorData;
         this.saveSettings();
     }
 
     async render() {
         await this.renderError('载入中...');
-        if (this.defaultData.username == '') {
+        if (this.userConfigData.username == '') {
             console.error('尚未配置用户');
             return await this.renderError('请先配置用户');
         }
@@ -183,8 +236,8 @@ class Widget extends Base {
     async getAppLogo() {
         let logoURL = 'https://z3.ax1x.com/2021/10/31/ISfUSS.png';
 
-        if (this.defaultData.custom_logo_image) {
-            logoURL = this.defaultData.custom_logo_image;
+        if (this.userConfigData.custom_logo_image) {
+            logoURL = this.userConfigData.custom_logo_image;
         }
 
         return await this.getImageByUrl(logoURL);
@@ -202,22 +255,47 @@ class Widget extends Base {
         return w;
     }
 
+    getFontColor() {
+        if (this.validColorString(this.appColorData.fontColor)) {
+            return new Color(this.appColorData.fontColor, 1);
+        }
+        return Color.dynamic(new Color('#2B2B2B', 1), Color.white());
+    }
+
     getBackgroundColor() {
         const bgColor = new LinearGradient();
 
-        bgColor.colors = [
-            Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1)),
-            Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1))
-        ];
+        let startColor = Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1));
+        let endColor = Color.dynamic(new Color(DEFAULT_BG_COLOR_LIGHT, 1), new Color(DEFAULT_BG_COLOR_DARK, 1));
+        // if user override
+        if (
+            this.appColorData.startColor != DEFAULT_BG_COLOR_LIGHT ||
+            this.appColorData.endColor != DEFAULT_BG_COLOR_LIGHT
+        ) {
+            if (
+                this.validColorString(this.appColorData.startColor) &&
+                this.validColorString(this.appColorData.endColor)
+            ) {
+                startColor = new Color(this.appColorData.startColor, 1);
+                endColor = new Color(this.appColorData.endColor, 1);
+                console.warn(this.appColorData.endColor);
+            }
+        }
+        console.warn('colors: ' + JSON.stringify(startColor) + JSON.stringify(endColor));
+        bgColor.colors = [startColor, endColor];
 
-        bgColor.locations = [0, 1];
+        bgColor.locations = [0.0, 1.0];
 
         return bgColor;
     }
 
+    validColorString(colorStr) {
+        return colorStr && colorStr.search('#') == 0 && (colorStr.length == 4 || colorStr.length == 7); // TODO: change to regex
+    }
+
     async renderSmall(data) {
         let w = new ListWidget();
-        let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
+        let fontColor = this.getFontColor();
         w.backgroundGradient = this.getBackgroundColor();
 
         const width = data.size['small']['width'];
@@ -237,8 +315,8 @@ class Widget extends Base {
         carNameBox.setPadding(0, 0, 0, 0);
 
         let carName = `${data.brand} ${data.model}`;
-        if (this.defaultData.custom_name.length > 0) {
-            carName = this.defaultData.custom_name;
+        if (this.userConfigData.custom_name.length > 0) {
+            carName = this.userConfigData.custom_name;
         }
         const carNameText = carNameBox.addText(carName);
         carNameText.leftAlignText();
@@ -259,7 +337,7 @@ class Widget extends Base {
             let logoImage = logoContainer.addImage(await this.getAppLogo());
             logoImage.rightAlignImage();
 
-            if (!this.defaultData.custom_logo_image) {
+            if (!this.userConfigData.custom_logo_image) {
                 logoImage.tintColor = fontColor;
             }
         } catch (e) {}
@@ -292,7 +370,7 @@ class Widget extends Base {
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.8), new Color('#2c2c2c', 0.8));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f1', 0.5), new Color('#2b2b2b', 0.5));
 
         const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
         carStatusTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
@@ -332,7 +410,7 @@ class Widget extends Base {
 
     async renderMedium(data, renderLarge = false) {
         let w = new ListWidget();
-        let fontColor = Color.dynamic(new Color('#2B2B2B'), Color.white());
+        let fontColor = this.getFontColor();
         w.backgroundGradient = this.getBackgroundColor();
 
         w.setPadding(0, 0, 0, 0);
@@ -350,8 +428,8 @@ class Widget extends Base {
         carNameContainer.setPadding(8, 14, 0, 0);
 
         let carName = `${data.brand} ${data.model} ${data.bodyType}`;
-        if (this.defaultData.custom_name.length > 0) {
-            carName = this.defaultData.custom_name;
+        if (this.userConfigData.custom_name.length > 0) {
+            carName = this.userConfigData.custom_name;
         }
         const carNameText = carNameContainer.addText(carName);
         carNameText.font = this.getFont(`${WIDGET_FONT}-DemiBold`, 20);
@@ -392,7 +470,7 @@ class Widget extends Base {
         carStatusBox.layoutHorizontally();
         carStatusBox.centerAlignContent();
         carStatusBox.cornerRadius = 4;
-        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f8', 0.8), new Color('#2c2c2c', 0.8));
+        carStatusBox.backgroundColor = Color.dynamic(new Color('#f1f1f1', 0.5), new Color('#2b2b2b', 0.5));
         const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
         carStatusTxt.font = this.getFont(`${WIDGET_FONT}-Regular`, 10);
         carStatusTxt.textColor = fontColor;
@@ -437,7 +515,7 @@ class Widget extends Base {
         try {
             let logoImage = logoImageContainer.addImage(await this.getAppLogo());
             logoImage.rightAlignImage();
-            if (!this.defaultData.custom_logo_image) {
+            if (!this.userConfigData.custom_logo_image) {
                 logoImage.tintColor = fontColor;
             }
         } catch (e) {}
@@ -508,14 +586,14 @@ class Widget extends Base {
 
     async loadMapView(latLng, width, height, useCache = true) {
         try {
-            if (!this.defaultData.map_api_key) {
+            if (!this.userConfigData.map_api_key) {
                 throw '获取地图失败，请检查API KEY';
             }
 
             width = parseInt(width);
             height = parseInt(height);
 
-            let mapApiKey = this.defaultData.map_api_key;
+            let mapApiKey = this.userConfigData.map_api_key;
 
             let url = `https://restapi.amap.com/v3/staticmap?location=${latLng}&scale=2&zoom=15&size=${width}*${height}&markers=large,0x00CCFF,:${latLng}&key=${mapApiKey}`;
 
@@ -650,7 +728,7 @@ class Widget extends Base {
         req.method = 'POST';
 
         req.body = JSON.stringify({
-            mobile: this.defaultData.username,
+            mobile: this.userConfigData.username,
             password: _password
         });
 
@@ -678,7 +756,7 @@ class Widget extends Base {
         };
 
         req.addParameterToMultipart('publicKey', publicKey);
-        req.addParameterToMultipart('encStr', encodeURIComponent(this.defaultData.password));
+        req.addParameterToMultipart('encStr', encodeURIComponent(this.userConfigData.password));
         req.addParameterToMultipart('etype', 'rsa1');
 
         const res = await req.loadJSON();
@@ -728,7 +806,7 @@ class Widget extends Base {
         };
 
         const vehicles = await req.loadJSON();
-        let vin = this.defaultData.vin;
+        let vin = this.userConfigData.vin;
 
         if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
             console.log('Get vehicle details success');
@@ -838,8 +916,8 @@ class Widget extends Base {
         let imageCar = '';
         let carImageUrl =
             BMW_SERVER_HOST + `/eadrax-ics/v3/presentation/vehicles/${data.vin}/images?carView=VehicleStatus`;
-        if (this.defaultData.custom_vehicle_image) {
-            imageCar = await this.getImageByUrl(this.defaultData.custom_vehicle_image);
+        if (this.userConfigData.custom_vehicle_image) {
+            imageCar = await this.getImageByUrl(this.userConfigData.custom_vehicle_image);
         } else {
             imageCar = await this.getBmwOfficialImage(carImageUrl);
         }
