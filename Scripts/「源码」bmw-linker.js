@@ -12,11 +12,13 @@ if (typeof require === 'undefined') require = importModule;
 const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
-let WIDGET_VERSION = 'v1.7';
+let WIDGET_FILE_NAME = 'bmw-linker.js';
+let WIDGET_VERSION = 'v2.0';
+let WIDGET_BUILD = '21110201';
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
-
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
+let APP_HOST_SERVER = 'https://bmw-linker.yocky.info';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
 let DEFAULT_BG_COLOR_DARK = '#2B2B2B';
@@ -38,6 +40,7 @@ let MY_BMW_LAST_CHECK_IN_AT = 'MY_BMW_LAST_CHECK_IN_AT';
 let APP_USE_AGREEMENT = 'APP_USE_AGREEMENT';
 let MY_BMW_VEHICLE_UPDATE_LAST_AT = 'MY_BMW_VEHICLE_UPDATE_LAST_AT';
 let MY_BMW_VEHICLE_DATA = 'MY_BMW_VEHICLE_DATA';
+let WIDGET_UPDATED_AT = 'WIDGET_UPDATED_AT';
 
 class Widget extends Base {
     DeviceSize = {
@@ -120,6 +123,7 @@ class Widget extends Base {
         this.appColorData = {...this.appColorData, ...colorSettings};
 
         if (config.runsInApp) {
+            this.registerAction('检查更新', this.checkUpdatePress);
             this.registerAction('配置小组件', this.setWidgetConfig);
         }
     }
@@ -128,7 +132,7 @@ class Widget extends Base {
         const confirmationAlert = new Alert();
 
         confirmationAlert.title = '郑重声明';
-        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关\n\r\nCopyright © 2021 Youke Xiang`;
+        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关\n\r\n作者: Yocky, UI: Popo`;
 
         confirmationAlert.addAction('同意');
         confirmationAlert.addCancelAction('不同意');
@@ -199,6 +203,75 @@ class Widget extends Base {
         }
 
         return mobileStr;
+    }
+
+    async checkUpdate(automated = false) {
+        try {
+            let updateAT = null;
+            if (automated && Keychain.contains(WIDGET_UPDATED_AT)) {
+                updateAT = parseInt(Keychain.get(WIDGET_UPDATED_AT));
+                if (updateAT && updateAT > new Date().valueOf() - 1000 * 60 * 60) {
+                    return console.warn('update checked within 1 hour');
+                }
+            }
+
+            const req = new Request(APP_HOST_SERVER + '/version.json');
+            const res = await req.loadJSON();
+
+            updateAT = new Date().valueOf();
+            Keychain.set(WIDGET_UPDATED_AT, String(updateAT));
+
+            if (res && Number(res['WIDGET_BUILD']) > Number(WIDGET_BUILD)) {
+                if (automated) {
+                    this.notify('BMW-Linker找到更新', '请打开Scriptable 点击 BMW-Linker 检查更新并下载');
+                }
+                return true;
+            }
+        } catch (e) {
+            console.error(e.message);
+            return false;
+        }
+
+        return false;
+    }
+
+    async downloadUpdate() {
+        try {
+            const fileManager = FileManager[module.filename.includes('Documents/iCloud~') ? 'iCloud' : 'local']();
+
+            const req = new Request(APP_HOST_SERVER + '/bmw-linker.js');
+            const res = await req.load();
+            fileManager.write(fileManager.joinPath(fileManager.documentsDirectory(), WIDGET_FILE_NAME), res);
+
+            this.notify('更新成功', 'BMW Linker 小组件已经更新');
+        } catch (e) {
+            console.error(e.message);
+            this.notify('更新失败', '请稍后尝试');
+        }
+    }
+
+    async checkUpdatePress() {
+        let hasUpdate = await this.checkUpdate();
+        console.warn('hasUpdate');
+        const updateAlert = new Alert();
+        updateAlert.title = '暂无更新';
+
+        if (hasUpdate) {
+            updateAlert.title = '找到更新';
+            updateAlert.message = '是否开始下载';
+
+            updateAlert.addAction('开始下载');
+        }
+        updateAlert.addCancelAction('取消');
+
+        let result = await updateAlert.presentAlert();
+
+        if (result == -1) {
+            return;
+        }
+
+        // start to download
+        await this.downloadUpdate();
     }
 
     async userConfigInput() {
@@ -359,6 +432,8 @@ class Widget extends Base {
             return await this.renderError('请先配置用户');
         }
         let screenSize = Device.screenSize();
+        this.checkUpdate(true);
+
         const data = await this.getData();
 
         if (data == null) {
@@ -482,7 +557,7 @@ class Widget extends Base {
         vehicleNameContainer.setPadding(paddingLeft, paddingLeft, 0, 0);
 
         let vehicleNameStr = `${data.brand} ${data.model}`;
-        if (this.userConfigData.custom_name.length > 0) {
+        if (this.userConfigData.custom_name && this.userConfigData.custom_name.length > 0) {
             vehicleNameStr = this.userConfigData.custom_name;
         }
         const vehicleNameText = vehicleNameContainer.addText(vehicleNameStr);
@@ -612,7 +687,7 @@ class Widget extends Base {
         vehicleNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
 
         let vehicleName = `${data.brand} ${data.model}`;
-        if (this.userConfigData.custom_name.length > 0) {
+        if (this.userConfigData.custom_name && this.userConfigData.custom_name.length > 0) {
             vehicleName = this.userConfigData.custom_name;
         }
         const vehicleNameText = vehicleNameContainer.addText(vehicleName);
