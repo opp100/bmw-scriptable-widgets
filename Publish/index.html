@@ -25,6 +25,11 @@
         <title>手机安装BMW Linker小组件指导</title>
     </head>
     <body class="d-flex flex-column h-100">
+        <div class="weixin-tip">
+            <p>
+                <img src="assets/leave_wechat.png" alt="微信打开" />
+            </p>
+        </div>
         <main class="flex-shrink-0">
             <div class="container text-center">
                 <h3 class="mt-5">手机安装BMW Linker小组件指导</h3>
@@ -64,15 +69,42 @@
         </main>
         <footer class="footer mt-auto py-3 bg-light">
             <div class="container text-center">
-                <span class="text-muted">
-                    Copyright © 2021 Youke Xiang
-                </span>
+                <span class="text-muted"> Copyright © 2021 Youke Xiang </span>
             </div>
         </footer>
     </body>
     <style>
         #js-text-area {
             display: none;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        a {
+            text-decoration: none;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        .weixin-tip {
+            display: none;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            filter: alpha(opacity=80);
+            height: 100%;
+            width: 100%;
+            z-index: 100;
+        }
+        .weixin-tip p {
+            text-align: center;
+            margin-top: 10%;
+            padding: 0 5%;
         }
     </style>
     <script>
@@ -90,6 +122,23 @@
 
             document.getElementById('open').focus();
         }
+
+        $(window).on('load', function () {
+            var winHeight = $(window).height();
+            function is_weixin() {
+                var ua = navigator.userAgent.toLowerCase();
+                if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+            var isWeixin = is_weixin();
+            if (isWeixin) {
+                $('.weixin-tip').css('height', winHeight);
+                $('.weixin-tip').show();
+            }
+        });
 
         $(document).ready(() => {
             $.ajax({
