@@ -34,7 +34,7 @@ let BMW_HEADERS = {
 let MY_BMW_REFRESH_TOKEN = 'MY_BMW_REFRESH_TOKEN';
 let MY_BMW_TOKEN = 'MY_BMW_TOKEN';
 let MY_BMW_TOKEN_UPDATE_LAST_AT = 'MY_BMW_TOKEN_UPDATE_LAST_AT';
-let MY_BMW_LAST_CHECK_IN = 'MY_BMW_LAST_CHECK_IN';
+let MY_BMW_LAST_CHECK_IN_AT = 'MY_BMW_LAST_CHECK_IN_AT';
 let APP_USE_AGREEMENT = 'APP_USE_AGREEMENT';
 let MY_BMW_VEHICLE_UPDATE_LAST_AT = 'MY_BMW_VEHICLE_UPDATE_LAST_AT';
 let MY_BMW_VEHICLE_DATA = 'MY_BMW_VEHICLE_DATA';
@@ -142,19 +142,72 @@ class Widget extends Base {
             Keychain.set(APP_USE_AGREEMENT, 'true');
         }
 
-        await this.userConfigInput();
+        await this.userLoginCredentials();
         await this.colorSetPickUp();
+    }
+
+    async userLoginCredentials() {
+        const userLoginAlert = new Alert();
+        userLoginAlert.title = '配置BMW登录';
+        userLoginAlert.message = '配置My BMW账号密码';
+
+        userLoginAlert.addTextField('账号(您的电话)', this.userConfigData['username']);
+        userLoginAlert.addSecureTextField('密码(不要有特殊字符)', this.userConfigData['password']);
+
+        userLoginAlert.addAction('确定');
+        userLoginAlert.addCancelAction('取消');
+
+        const id = await userLoginAlert.presentAlert();
+
+        if (id == -1) {
+            return;
+        }
+
+        this.userConfigData['username'] = this.formatUserMobile(userLoginAlert.textFieldValue(0));
+        this.userConfigData['password'] = userLoginAlert.textFieldValue(1);
+
+        // try login first
+        let loginResult = await this.myBMWLogin();
+
+        if (!loginResult) {
+            const messageAlert = new Alert();
+            messageAlert.title = '登录失败';
+            messageAlert.message = '请检查您的账号密码';
+            messageAlert.addCancelAction('取消');
+            await messageAlert.presentAlert();
+
+            return this.userLoginCredentials();
+        }
+
+        // write to local
+        this.settings['UserConfig'] = this.userConfigData;
+        this.saveSettings();
+
+        await this.userConfigInput();
+    }
+
+    formatUserMobile(mobileStr) {
+        // remove all non numerical char
+        mobileStr = mobileStr.replace(/\D/g, '');
+
+        if (mobileStr.startsWith('86')) {
+            return mobileStr;
+        }
+
+        if (mobileStr.length == 11) {
+            return '86' + mobileStr;
+        }
+
+        return mobileStr;
     }
 
     async userConfigInput() {
         const userInfoAlert = new Alert();
         userInfoAlert.title = '配置小组件';
-        userInfoAlert.message = '配置My BMW账号密码，其他设置可以留空。';
+        userInfoAlert.message = '可以不用填写，留空信息会从系统自动获取';
 
         // refer to default config
         let configSet = {
-            username: '账号86+您的电话',
-            password: '密码（不要有特殊字符）',
             custom_name: '自定义车名（默认自动获取）',
             custom_vehicle_image: '车辆图片URL（默认自动获取）',
             custom_logo_image: 'LOGO URL(默认自动获取）',
@@ -174,14 +227,7 @@ class Widget extends Base {
             userInfoAlert.addTextField(configSet[key], this.userConfigData[key]);
         }
 
-        userInfoAlert.addAction('确定');
-        userInfoAlert.addCancelAction('取消');
-
-        const id = await userInfoAlert.presentAlert();
-
-        if (id == -1) {
-            return;
-        }
+        userInfoAlert.addAction('下一步');
 
         // start to get data
         for (const key in configSet) {
@@ -598,12 +644,12 @@ class Widget extends Base {
 
             const levelContainer = kmContainer.addStack();
             const separator = levelContainer.addText(' / ');
-            separator.font = this.getFont(`${WIDGET_FONT}`, 13);
+            separator.font = this.getFont(`${WIDGET_FONT}`, 16);
             separator.textColor = fontColor;
             separator.textOpacity = 0.6;
 
             const levelText = levelContainer.addText(`${levelValue}${levelUnits}`);
-            levelText.font = this.getFont(`${WIDGET_FONT}`, 17);
+            levelText.font = this.getFont(`${WIDGET_FONT}`, 18);
             levelText.textColor = fontColor;
             levelText.textOpacity = 0.6;
 
@@ -683,17 +729,20 @@ class Widget extends Base {
             carImage.rightAlignImage();
         } catch (e) {}
 
-        if (data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
+        if (data.status && data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
+            let doorWindowStatus = data.status.doorsAndWindows[0];
+
             let windowStatusContainer = rightContainer.addStack();
             windowStatusContainer.setPadding(0, 0, 16, 0);
 
             windowStatusContainer.layoutHorizontally();
             windowStatusContainer.addSpacer();
 
-            let windowStatus = `${data.status.doorsAndWindows[0].title} ${data.status.doorsAndWindows[0].state} `;
+            let windowStatus = `${doorWindowStatus.title} ${doorWindowStatus.state} `;
             let windowStatusText = windowStatusContainer.addText(windowStatus);
+
             windowStatusText.font = this.getFont(`${WIDGET_FONT}`, 10);
-            windowStatusText.textColor = fontColor;
+            windowStatusText.textColor = doorWindowStatus.state == '已打开' ? new Color('#eb4034', 1) : fontColor;
             windowStatusText.textOpacity = 0.5;
 
             windowStatusContainer.addSpacer();
@@ -803,10 +852,20 @@ class Widget extends Base {
             return '';
         }
 
-        let dateFormatter = new DateFormatter();
-        dateFormatter.dateFormat = 'MM-dd HH:mm';
+        let lastUpdated = new Date(data.status.lastUpdatedAt);
+        const today = new Date();
 
-        let dateStr = dateFormatter.string(new Date(data.status.lastUpdatedAt));
+        let formatter = 'MM-dd HH:mm';
+        if (lastUpdated.getDate() == today.getDate()) {
+            formatter = 'HH:mm';
+        }
+
+        let dateFormatter = new DateFormatter();
+        dateFormatter.dateFormat = formatter;
+
+        let dateStr = dateFormatter.string(lastUpdated);
+
+        // get today
 
         return `${dateStr}更新`;
     }
@@ -1020,23 +1079,23 @@ class Widget extends Base {
     async checkInDaily(access_token) {
         // TODO: set check in during hours in the day
         let dateFormatter = new DateFormatter();
-        const lastCheckIn = Keychain.get(MY_BMW_LAST_CHECK_IN);
+        const lastCheckIn = Keychain.get(MY_BMW_LAST_CHECK_IN_AT);
 
         dateFormatter.dateFormat = 'yyyy-MM-dd';
         let today = dateFormatter.string(new Date());
 
-        if (Keychain.contains(MY_BMW_LAST_CHECK_IN)) {
+        if (Keychain.contains(MY_BMW_LAST_CHECK_IN_AT)) {
             console.log('last checked in at: ' + lastCheckIn);
 
             if (lastCheckIn == today) {
-                console.log('App has checked in');
+                console.log('User has checked in today');
 
                 return;
             }
         }
 
         console.log('Start check in');
-        let req = new Request(BMW_SERVER_HOST + '/is/eadrax-community/private-api/v1/mine/check-in');
+        let req = new Request(BMW_SERVER_HOST + '/cis/eadrax-community/private-api/v1/mine/check-in');
         req.headers = {
             ...BMW_HEADERS,
             authorization: 'Bearer ' + access_token,
@@ -1047,14 +1106,17 @@ class Widget extends Base {
         req.body = JSON.stringify({signDate: null});
 
         const res = await req.loadJSON();
-        Keychain.set(MY_BMW_LAST_CHECK_IN, today);
+
+        if (Number(res.code) >= 200 && Number(res.code) <= 300) {
+            Keychain.set(MY_BMW_LAST_CHECK_IN_AT, today);
+        }
 
         console.log(res);
 
-        let msg = `${res.message || ''}: ${res.businessCode || ''}`;
+        let msg = `${res.message || ''}`;
 
         if (res.code != 200) {
-            msg += `, 上次签到: ${lastCheckIn || 'None'}.`;
+            msg += `: ${res.businessCode || ''}, 上次签到: ${lastCheckIn || 'None'}.`;
         }
 
         this.notify('My BMW签到', msg);

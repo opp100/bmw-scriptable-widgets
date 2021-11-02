@@ -716,15 +716,11 @@ const Running = async (Widget, default_args = "") => {
     if (!act || !M['_actions']) {
       // 弹出选择菜单
       const actions = M['_actions']
-      const _actions = [
-        async () => {
-          Safari.openInApp("https://support.qq.com/products/287371", false)
-        }
-      ]
+      const _actions = []
       const alert = new Alert()
       alert.title = M.name
       alert.message = M.desc
-      alert.addAction("反馈交流")
+
       for (let _ in actions) {
         alert.addAction(_)
         _actions.push(actions[_])
