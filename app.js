@@ -9,6 +9,7 @@ const bodyParser = require('body-parser');
 const HTTP_PORT = 5566;
 const WORK_DIR = path.dirname(__filename);
 const SCRIPTS_DIR = path.join(WORK_DIR, 'Scripts');
+const PUBLISH_DIR = path.join(WORK_DIR, 'Publish');
 
 const app = express();
 const upload = multer({
@@ -49,6 +50,15 @@ app.get('/Scripts/:fileName', (req, res) => {
     try {
         let js = fs.readFileSync(path.join(SCRIPTS_DIR, req.params['fileName'])).toString();
         res.send(js);
+    } catch (e) {
+        res.send('//访问文件错误');
+    }
+});
+
+app.get('/Publish/:fileName', (req, res) => {
+    try {
+        let file = fs.readFileSync(path.join(PUBLISH_DIR, req.params['fileName'])).toString();
+        res.send(file);
     } catch (e) {
         res.send('//访问文件错误');
     }
