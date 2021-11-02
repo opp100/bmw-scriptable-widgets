@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-100">
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+        <script
+            src="https://code.jquery.com/jquery-3.6.0.min.js"
+            integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+            crossorigin="anonymous"
+        ></script>
 
         <link
             href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css"
@@ -20,33 +24,53 @@
 
         <title>手机安装BMW Linker小组件指导</title>
     </head>
-    <body>
-        <h3>手机安装BMW Linker小组件指导</h3>
-        <br />
-        <br />
-        <h5>1. 下载安装 Scriptable App</h5>
-        <a class="appStoreLink" href="https://apps.apple.com/cn/app/scriptable/id1405459188" target="_blank">
-            <img class="appStore" src="assets/appstore.png" alt="App Store" />
-        </a>
-        <br />
-        <br />
-        <h5>2. 点击 复制代码</h5>
-        <button type="button" id="copy" onclick="copy()" class="btn btn-success" disabled>复制代码</button>
-        <textarea id="js-text-area" rows="20" readonly style="min-width: 400px"></textarea>
-        <br />
-        <br />
-        <h5>3. 点击 打开Scriptable, 点击 ➕，粘贴，运行 ▶️</h5>
-        <a id="open" type="button" class="btn btn-info" href="scriptable:///add?scriptName=BMW_LINKER安装器"
-            >打开 Scriptable</a
-        >
+    <body class="d-flex flex-column h-100">
+        <main class="flex-shrink-0">
+            <div class="container text-center">
+                <h3 class="mt-5">手机安装BMW Linker小组件指导</h3>
+                <br />
+                <br />
+                <h5>1. 下载安装 Scriptable App</h5>
+                <div>
+                    <a
+                        class="appStoreLink"
+                        href="https://apps.apple.com/cn/app/scriptable/id1405459188"
+                        target="_blank"
+                    >
+                        <img
+                            class="appStore img-fluid"
+                            style="max-width: 40%"
+                            src="assets/appstore.png"
+                            alt="App Store"
+                        />
+                    </a>
+                </div>
+                <br />
+                <br />
+                <div>
+                    <h5>2. 点击 复制代码</h5>
+                    <a type="button" id="copy" onclick="copy()" class="btn btn-success" disabled href="#">复制代码</a>
+                    <textarea id="js-text-area" rows="20" readonly style="min-width: 400px"></textarea>
+                </div>
+                <br />
+                <br />
+                <div>
+                    <h5>3. 点击 打开Scriptable, 点击 ➕，粘贴，运行 ▶️</h5>
+                    <a id="open" type="button" class="btn btn-info" href="scriptable:///add?scriptName=BMW_LINKER安装器"
+                        >打开 Scriptable</a
+                    >
+                </div>
+            </div>
+        </main>
+        <footer class="footer mt-auto py-3 bg-light">
+            <div class="container text-center">
+                <span class="text-muted">
+                    Copyright © 2021 Youke Xiang
+                </span>
+            </div>
+        </footer>
     </body>
     <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
         #js-text-area {
             display: none;
         }
@@ -61,7 +85,7 @@
             document.execCommand('copy');
             $temp.remove();
 
-            $('#copy').html('复制成功！' + (copyOK > 0 ? '+' + copyOK : ''))
+            $('#copy').html('复制成功！' + (copyOK > 0 ? '+' + copyOK : ''));
             copyOK++;
 
             document.getElementById('open').focus();
@@ -70,8 +94,8 @@
         $(document).ready(() => {
             $.ajax({
                 url: '/Publish/installer.js?date=' + new Date().valueOf(),
+                dataType: 'text',
                 success: (response) => {
-                    console.warn(response);
                     $('#js-text-area').val(response);
                     $('#copy').removeAttr('disabled');
                 }

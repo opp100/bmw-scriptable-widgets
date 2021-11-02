@@ -38,7 +38,7 @@ app.get('/', (req, res) => {
     for (const file of files) {
         filesStr += `'${file}',`;
     }
-    
+
     js = js.replace('*|FILES|*', filesStr);
 
     html = html.replace('@@code@@', js);
@@ -55,10 +55,17 @@ app.get('/Scripts/:fileName', (req, res) => {
     }
 });
 
-app.get('/Publish/:fileName', (req, res) => {
+app.get('/Publish/:fileName*', (req, res) => {
     try {
-        let file = fs.readFileSync(path.join(PUBLISH_DIR, req.params['fileName'])).toString();
-        res.send(file);
+        let filePath = req.params['fileName'];
+        for (const key in req.params) {
+            if (Object.hasOwnProperty.call(req.params, key) && key != 'fileName') {
+                filePath += req.params[key];
+            }
+        }
+        console.warn(filePath);
+
+        res.sendFile(path.join(PUBLISH_DIR, filePath));
     } catch (e) {
         res.send('//访问文件错误');
     }
