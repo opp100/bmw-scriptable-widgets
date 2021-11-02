@@ -33,13 +33,21 @@
         <main class="flex-shrink-0">
             <div class="container text-center">
                 <h3 class="mt-5">手机安装BMW Linker小组件指导</h3>
-                <span id="version-div" class='text-muted'></span>
+                <span id="version-div" class="text-muted"></span>
                 <br />
                 <div>
-                    <a href="https://docs.qq.com/doc/DT2RNTml4d1hmSmlh" class="h4" target="_blank">帮助文档</a>
+                    <a href="https://docs.qq.com/doc/DT2RNTml4d1hmSmlh" target="_blank">帮助文档</a>
                 </div>
                 <br />
+                <hr />
+                <div>
+                    <a href="https://b23.tv/oMgnek" class="h3" target="_blank">视屏教程点这里</a>
+                </div>
+                <hr />
+                <br />
+                <p class="text-muted">以下是文字教程</p>
                 <h5>1. 下载安装 Scriptable App</h5>
+                <br />
                 <div>
                     <a
                         class="appStoreLink"
@@ -73,11 +81,11 @@
                 <br />
                 <div>
                     <h5>4. 点击bmw-linker并根据提示完成设置</h5>
-                    <img src="assets/setup_1.png" class="img img-fluid"/>
+                    <img src="assets/setup_1.png" class="img img-fluid" />
                 </div>
                 <div>
                     <h5>5. 在桌面添加小组件</h5>
-                    <img src="assets/widget_helper.png" class="img img-fluid"/>
+                    <img src="assets/widget_helper.png" class="img img-fluid" />
                 </div>
                 <br />
                 <br />
@@ -87,8 +95,9 @@
                 <div>
                     <small class="text-muted">
                         *开发者 Yocky ，感谢 Popo 提供 UI 设计，感谢胡总、吹雪和部分群友，提供思路帮助与测试。
-                        <br />本小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关。</small
-                    >
+                        <br />感谢各路车主帮忙教学、推广等。
+                        <br />本小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关。
+                    </small>
                 </div>
                 <br />
                 <br />
@@ -181,8 +190,10 @@
                 url: '/version.json?date=' + new Date().valueOf(),
                 dataType: 'json',
                 success: (response) => {
-                    if(response) {
-                        $('#version-div').append(`<small>${response['WIDGET_VERSION']} (${response['WIDGET_BUILD']})</small>`);
+                    if (response) {
+                        $('#version-div').append(
+                            `<small>${response['WIDGET_VERSION']} (${response['WIDGET_BUILD']})</small>`
+                        );
                     }
                 }
             });
