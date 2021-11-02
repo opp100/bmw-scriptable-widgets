@@ -137,6 +137,8 @@ class Widget extends Base {
         confirmationAlert.addAction('同意');
         confirmationAlert.addCancelAction('不同意');
 
+        await this.getDependencies();
+
         const userSelection = await confirmationAlert.presentAlert();
         if (userSelection == -1) {
             console.log('User denied');
@@ -248,6 +250,31 @@ class Widget extends Base {
             console.error(e.message);
             this.notify('更新失败', '请稍后尝试');
         }
+    }
+
+    async getDependencies() {
+        const fileManager = FileManager[module.filename.includes('Documents/iCloud~') ? 'iCloud' : 'local']();
+
+        return await Promise.all(
+            [].map(async (js) => {
+                try {
+                    let filePath = fileManager.joinPath(fileManager.documentsDirectory(), js);
+                    let fileExists = fileManager.fileExists(filePath);
+
+                    if (fileExists) {
+                        console.warn('Dependency found: ' + fileExists); // TODO: verify file?
+                        return;
+                    }
+
+                    const req = new Request(`https://bmw-linker.yocky.info/lib/${encodeURIComponent(js)}`);
+                    const res = await req.load();
+
+                    console.warn(filePath + ' downloaded');
+
+                    fileManager.write(filePath, res);
+                } catch (e) {}
+            })
+        );
     }
 
     async checkUpdatePress() {
@@ -426,6 +453,9 @@ class Widget extends Base {
     }
 
     async render() {
+        // check all dependencies
+        await this.getDependencies();
+
         await this.renderError('载入中...');
         if (this.userConfigData.username == '') {
             console.error('尚未配置用户');
@@ -954,7 +984,8 @@ class Widget extends Base {
 
     async getData() {
         let accessToken = await this.getAccessToken();
-        if (accessToken == '') {
+
+        if (!accessToken || accessToken == '') {
             return null;
         }
 
@@ -962,8 +993,7 @@ class Widget extends Base {
             await this.checkInDaily(accessToken);
         } catch (e) {}
 
-        const data = await this.getVehicleDetails(accessToken);
-        return data;
+        return await this.getVehicleDetails(accessToken);
     }
 
     async getPublicKey() {
@@ -983,24 +1013,24 @@ class Widget extends Base {
 
     async getAccessToken() {
         let accessToken = '';
-        if (Keychain.contains(MY_BMW_TOKEN_UPDATE_LAST_AT)) {
-            let lastUpdate = parseInt(Keychain.get(MY_BMW_TOKEN_UPDATE_LAST_AT));
-            if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
-                if (Keychain.contains(MY_BMW_TOKEN)) {
-                    accessToken = Keychain.get(MY_BMW_TOKEN);
-                }
-            } else {
-                if (Keychain.contains(MY_BMW_REFRESH_TOKEN)) {
-                    let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
-                    // get refresh token
-                    accessToken = await this.refreshToken(refreshToken);
-                }
-            }
-        }
+        // if (Keychain.contains(MY_BMW_TOKEN_UPDATE_LAST_AT)) {
+        //     let lastUpdate = parseInt(Keychain.get(MY_BMW_TOKEN_UPDATE_LAST_AT));
+        //     if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
+        //         if (Keychain.contains(MY_BMW_TOKEN)) {
+        //             accessToken = Keychain.get(MY_BMW_TOKEN);
+        //         }
+        //     } else {
+        //         if (Keychain.contains(MY_BMW_REFRESH_TOKEN)) {
+        //             let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
+        //             // get refresh token
+        //             accessToken = await this.refreshToken(refreshToken);
+        //         }
+        //     }
+        // }
 
-        if (accessToken && accessToken != '') {
-            return accessToken;
-        }
+        // if (accessToken && accessToken != '') {
+        //     return accessToken;
+        // }
 
         console.log('No token found, get again');
         const res = await this.myBMWLogin();
