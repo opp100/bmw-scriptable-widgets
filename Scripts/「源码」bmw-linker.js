@@ -202,9 +202,9 @@ class Widget extends Base {
     }
 
     async userConfigInput() {
-        const userInfoAlert = new Alert();
-        userInfoAlert.title = '配置小组件';
-        userInfoAlert.message = '可以不用填写，留空信息会从系统自动获取';
+        const userCustomConfigAlert = new Alert();
+        userCustomConfigAlert.title = '自定义小组件';
+        userCustomConfigAlert.message = '以下可以不用填写，留空信息会从系统自动获取';
 
         // refer to default config
         let configSet = {
@@ -221,13 +221,20 @@ class Widget extends Base {
             }
 
             if (key == 'password') {
-                userInfoAlert.addSecureTextField(configSet[key], this.userConfigData[key]);
+                userCustomConfigAlert.addSecureTextField(configSet[key], this.userConfigData[key]);
                 continue;
             }
-            userInfoAlert.addTextField(configSet[key], this.userConfigData[key]);
+            userCustomConfigAlert.addTextField(configSet[key], this.userConfigData[key]);
         }
 
-        userInfoAlert.addAction('下一步');
+        userCustomConfigAlert.addCancelAction('跳过');
+        userCustomConfigAlert.addAction('下一步');
+
+        let result = await userCustomConfigAlert.presentAlert();
+
+        if (result == -1) {
+            return;
+        }
 
         // start to get data
         for (const key in configSet) {
@@ -236,7 +243,7 @@ class Widget extends Base {
             }
 
             let index = Object.keys(configSet).indexOf(key);
-            this.userConfigData[key] = userInfoAlert.textFieldValue(index);
+            this.userConfigData[key] = userCustomConfigAlert.textFieldValue(index);
         }
 
         // write to local
