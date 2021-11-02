@@ -128,7 +128,7 @@ class Widget extends Base {
         const confirmationAlert = new Alert();
 
         confirmationAlert.title = '郑重声明';
-        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关`;
+        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关\n\r\nCopyright © 2021 Youke Xiang`;
 
         confirmationAlert.addAction('同意');
         confirmationAlert.addCancelAction('不同意');
