@@ -33,6 +33,7 @@
         <main class="flex-shrink-0">
             <div class="container text-center">
                 <h3 class="mt-5">手机安装BMW Linker小组件指导</h3>
+                <span id="version-div" class='text-muted'></span>
                 <br />
                 <br />
                 <h5>1. 下载安装 Scriptable App</h5>
@@ -163,6 +164,16 @@
                 success: (response) => {
                     $('#js-text-area').val(response);
                     $('#copy').removeAttr('disabled');
+                }
+            });
+
+            $.ajax({
+                url: '/version.json?date=' + new Date().valueOf(),
+                dataType: 'json',
+                success: (response) => {
+                    if(response) {
+                        $('#version-div').append(`<small>${response['WIDGET_VERSION']} (${response['WIDGET_BUILD']})</small>`);
+                    }
                 }
             });
         });
