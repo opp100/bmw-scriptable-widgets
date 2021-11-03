@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.1';
-let WIDGET_BUILD = '21110301';
+let WIDGET_VERSION = 'v2.0.3';
+let WIDGET_BUILD = '21110302';
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
@@ -1213,7 +1213,6 @@ class Widget extends Base {
     }
 
     async getVehicleDetails(access_token) {
-        let vehicleData = null;
         let vin = this.userConfigData.vin || '';
 
         let lastUpdateKey = vin + MY_BMW_VEHICLE_UPDATE_LAST_AT;
@@ -1224,23 +1223,21 @@ class Widget extends Base {
             if (Keychain.contains(lastUpdateKey) && Keychain.contains(localVehicleDataKey)) {
                 let lastUpdate = parseInt(Keychain.get(lastUpdateKey));
 
-                vehicleData = JSON.parse(Keychain.get(localVehicleDataKey));
+                let cachedVehicleData = JSON.parse(Keychain.get(localVehicleDataKey));
 
                 // load data every 5 mins
-                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 5 && vehicleData && vehicleData.vin) {
+                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 1 && cachedVehicleData && cachedVehicleData.vin) {
                     console.log('Get vehicle data from cache');
 
-                    return vehicleData;
+                    return cachedVehicleData;
                 }
             }
         } catch (e) {
             console.warn('Load vehicle from cache failed');
         }
 
-        console.log('Start to get vehicle details');
-        let req = new Request(
-            BMW_SERVER_HOST + `/eadrax-vcs/v1/vehicles?apptimezone=480&appDateTime=${new Date().valueOf()}`
-        );
+        console.log('Start to get vehicle details online');
+        let req = new Request(BMW_SERVER_HOST + `/eadrax-vcs/v1/vehicles?appDateTime=${new Date().valueOf()}`);
 
         req.headers = {
             ...BMW_HEADERS,
@@ -1251,6 +1248,8 @@ class Widget extends Base {
         const vehicles = await req.loadJSON();
 
         if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
+            let vehicleData = null;
+
             console.log('Get vehicle details success');
             if (vin && vin.length > 0) {
                 // if more than one vehicle
@@ -1264,7 +1263,7 @@ class Widget extends Base {
                     vehicleData = vehicleFound;
                 }
             }
-            console.warn(vehicleData);
+
             vehicleData = vehicleData || vehicles[0];
 
             Keychain.set(lastUpdateKey, String(new Date().valueOf()));
