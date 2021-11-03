@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0';
-let WIDGET_BUILD = '21110201';
+let WIDGET_VERSION = 'v2.0.1';
+let WIDGET_BUILD = '21110301';
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
@@ -41,7 +41,7 @@ let APP_USE_AGREEMENT = 'APP_USE_AGREEMENT';
 let MY_BMW_VEHICLE_UPDATE_LAST_AT = 'MY_BMW_VEHICLE_UPDATE_LAST_AT';
 let MY_BMW_VEHICLE_DATA = 'MY_BMW_VEHICLE_DATA';
 let WIDGET_UPDATED_AT = 'WIDGET_UPDATED_AT';
-
+let WIDGET_DANGER_COLOR = '#ff0000';
 class Widget extends Base {
     DeviceSize = {
         '428x926': {
@@ -284,8 +284,13 @@ class Widget extends Base {
         updateAlert.title = '暂无更新';
 
         if (hasUpdate) {
+            // load changes log
+            let changeLogText = await this.loadChangeLogs();
             updateAlert.title = '找到更新';
-            updateAlert.message = '是否开始下载';
+
+            updateAlert.message = changeLogText;
+
+            updateAlert.message += '\n\r\n是否开始下载';
 
             updateAlert.addAction('开始下载');
         }
@@ -299,6 +304,19 @@ class Widget extends Base {
 
         // start to download
         await this.downloadUpdate();
+    }
+
+    async loadChangeLogs() {
+        try {
+            let req = new Request(APP_HOST_SERVER + '/change_logs.text');
+
+            req.method = 'GET';
+            let changeLog = await req.loadString();
+
+            return changeLog;
+        } catch (e) {
+            return '';
+        }
     }
 
     async userConfigInput() {
@@ -393,6 +411,18 @@ class Widget extends Base {
                     endColor: '#526387',
                     fontColor: '#fff'
                 }
+            },
+            红色: {
+                light: {
+                    startColor: '#b16968',
+                    endColor: '#fff',
+                    fontColor: '#1d1d1d'
+                },
+                dark: {
+                    startColor: '#a84242',
+                    endColor: '#540101',
+                    fontColor: '#fff'
+                }
             }
         };
 
@@ -417,7 +447,7 @@ class Widget extends Base {
             }
         }
 
-        if (userSelection >= 3) {
+        if (userSelection >= Object.keys(systemColorSet).length) {
             this.settings['AppColorConfig'] = await this.colorConfigInput();
         }
         // write to local
@@ -462,7 +492,9 @@ class Widget extends Base {
             return await this.renderError('请先配置用户');
         }
         let screenSize = Device.screenSize();
-        this.checkUpdate(true);
+        try {
+            this.checkUpdate(true);
+        } catch (e) {}
 
         const data = await this.getData();
 
@@ -474,7 +506,7 @@ class Widget extends Base {
         try {
             data.size = this.DeviceSize[`${screenSize.width}x${screenSize.height}`] || this.DeviceSize['375x812'];
         } catch (e) {
-            console.warn(e);
+            console.warn('Display Error: ' + e.message);
             await this.renderError('显示错误：' + e.message);
         }
         //console.log(JSON.stringify(data))
@@ -494,7 +526,7 @@ class Widget extends Base {
         // not load dynamically have to re add the widget
         let darkModel = Device.isUsingDarkAppearance();
         if (darkModel) {
-            logoURL = DEFAULT_LOGO_DARK;
+            // logoURL = DEFAULT_LOGO_DARK;
         }
 
         if (this.userConfigData.custom_logo_image) {
@@ -595,7 +627,7 @@ class Widget extends Base {
         // get dynamic size
         let vehicleNameSize = 20;
 
-        if (vehicleNameStr.length > 10) {
+        if (vehicleNameStr.length >= 10) {
             vehicleNameSize = vehicleNameSize - Math.round(vehicleNameStr.length / 4);
         }
 
@@ -627,7 +659,8 @@ class Widget extends Base {
         kmContainer.bottomAlignContent();
 
         try {
-            const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
+            const {levelValue, levelUnits, rangeValue, rangeUnits} = this.getFuelIndicators(data.status.fuelIndicators);
+
             const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
             kmText.font = this.getFont(`${WIDGET_FONT}`, 17);
             kmText.textColor = fontColor;
@@ -659,8 +692,16 @@ class Widget extends Base {
 
         try {
             const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-            carStatusTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
-            carStatusTxt.textColor = fontColor;
+
+            let displayFont = WIDGET_FONT;
+            let displayFontColor = fontColor;
+            if (data.status.doorsGeneralState != '已上锁') {
+                displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
+                displayFont = WIDGET_FONT_BOLD;
+            }
+
+            carStatusTxt.font = this.getFont(displayFont, 10);
+            carStatusTxt.textColor = displayFontColor;
             carStatusTxt.textOpacity = 0.7;
             carStatusBox.addSpacer(5);
 
@@ -716,12 +757,19 @@ class Widget extends Base {
         const vehicleNameContainer = topContainer.addStack();
         vehicleNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
 
-        let vehicleName = `${data.brand} ${data.model}`;
+        let vehicleNameStr = `${data.brand} ${data.model}`;
         if (this.userConfigData.custom_name && this.userConfigData.custom_name.length > 0) {
-            vehicleName = this.userConfigData.custom_name;
+            vehicleNameStr = this.userConfigData.custom_name;
         }
-        const vehicleNameText = vehicleNameContainer.addText(vehicleName);
-        vehicleNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, 24);
+        const vehicleNameText = vehicleNameContainer.addText(vehicleNameStr);
+
+        let vehicleNameSize = 24;
+
+        if (vehicleNameStr.length >= 10) {
+            vehicleNameSize = vehicleNameSize - Math.round(vehicleNameStr.length / 4);
+        }
+
+        vehicleNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, vehicleNameSize);
         vehicleNameText.textColor = fontColor;
 
         const logoImageContainer = topContainer.addStack();
@@ -749,7 +797,7 @@ class Widget extends Base {
         kmContainer.bottomAlignContent();
 
         try {
-            const {levelValue, levelUnits, rangeValue, rangeUnits} = data.status.fuelIndicators[0];
+            const {levelValue, levelUnits, rangeValue, rangeUnits} = this.getFuelIndicators(data.status.fuelIndicators);
             const kmText = kmContainer.addText(`${rangeValue + ' ' + rangeUnits}`);
             kmText.font = this.getFont(`${WIDGET_FONT}`, 20);
             kmText.textColor = fontColor;
@@ -791,8 +839,16 @@ class Widget extends Base {
 
         try {
             const carStatusTxt = carStatusBox.addText(`${data.status.doorsGeneralState}`);
-            carStatusTxt.font = this.getFont(`${WIDGET_FONT}`, 10);
-            carStatusTxt.textColor = fontColor;
+
+            let displayFont = WIDGET_FONT;
+            let displayFontColor = fontColor;
+            if (data.status.doorsGeneralState != '已上锁') {
+                displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
+                displayFont = WIDGET_FONT_BOLD;
+            }
+
+            carStatusTxt.font = this.getFont(displayFont, 10);
+            carStatusTxt.textColor = displayFontColor;
             carStatusTxt.textOpacity = 0.7;
             carStatusBox.addSpacer(5);
 
@@ -853,8 +909,15 @@ class Widget extends Base {
             let windowStatus = `${doorWindowStatus.title} ${doorWindowStatus.state} `;
             let windowStatusText = windowStatusContainer.addText(windowStatus);
 
-            windowStatusText.font = this.getFont(`${WIDGET_FONT}`, 10);
-            windowStatusText.textColor = doorWindowStatus.state == '已打开' ? new Color('#eb4034', 1) : fontColor;
+            let displayFont = WIDGET_FONT;
+            let displayFontColor = fontColor;
+            if (doorWindowStatus.state != '已关闭') {
+                displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
+                displayFont = WIDGET_FONT_BOLD;
+            }
+
+            windowStatusText.font = this.getFont(displayFont, 10);
+            windowStatusText.textColor = displayFontColor;
             windowStatusText.textOpacity = 0.5;
 
             windowStatusContainer.addSpacer();
@@ -942,6 +1005,27 @@ class Widget extends Base {
         }
     }
 
+    getFuelIndicators(fuelIndicators) {
+        let _fuelObj = {
+            levelValue: null,
+            levelUnits: null,
+            rangeValue: null,
+            rangeUnits: null,
+            chargingType: null
+        };
+        try {
+            for (const fuelIndicator of fuelIndicators) {
+                for (const key in _fuelObj) {
+                    if (fuelIndicator[key] && !_fuelObj[key]) {
+                        _fuelObj[key] = fuelIndicator[key];
+                    }
+                }
+            }
+        } catch (e) {}
+
+        return _fuelObj;
+    }
+
     buildMapURL(data) {
         let locationStr = '';
         let latLng = '';
@@ -991,7 +1075,9 @@ class Widget extends Base {
 
         try {
             await this.checkInDaily(accessToken);
-        } catch (e) {}
+        } catch (e) {
+            console.error(e.message);
+        }
 
         return await this.getVehicleDetails(accessToken);
     }
@@ -1128,14 +1214,17 @@ class Widget extends Base {
 
     async getVehicleDetails(access_token) {
         let vehicleData = null;
+        let vin = this.userConfigData.vin || '';
+
+        let lastUpdateKey = vin + MY_BMW_VEHICLE_UPDATE_LAST_AT;
+        let localVehicleDataKey = vin + MY_BMW_VEHICLE_DATA;
 
         // skip update prevent access to bmw too much
         try {
-            if (Keychain.contains(MY_BMW_VEHICLE_UPDATE_LAST_AT) && Keychain.contains(MY_BMW_VEHICLE_DATA)) {
-                let lastUpdate = parseInt(Keychain.get(MY_BMW_VEHICLE_UPDATE_LAST_AT));
-                console.warn(lastUpdate);
+            if (Keychain.contains(lastUpdateKey) && Keychain.contains(localVehicleDataKey)) {
+                let lastUpdate = parseInt(Keychain.get(lastUpdateKey));
 
-                vehicleData = JSON.parse(Keychain.get(MY_BMW_VEHICLE_DATA));
+                vehicleData = JSON.parse(Keychain.get(localVehicleDataKey));
 
                 // load data every 5 mins
                 if (lastUpdate > new Date().valueOf() - 1000 * 60 * 5 && vehicleData && vehicleData.vin) {
@@ -1160,7 +1249,6 @@ class Widget extends Base {
         };
 
         const vehicles = await req.loadJSON();
-        let vin = this.userConfigData.vin;
 
         if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
             console.log('Get vehicle details success');
@@ -1171,17 +1259,18 @@ class Widget extends Base {
                 });
 
                 if (vehicleFound) {
-                    console.log('VIN matched and found');
+                    console.log('VIN matched and found: ' + vin);
 
                     vehicleData = vehicleFound;
                 }
             }
+            console.warn(vehicleData);
+            vehicleData = vehicleData || vehicles[0];
 
-            vehicleData = vehicles[0];
+            Keychain.set(lastUpdateKey, String(new Date().valueOf()));
+            Keychain.set(localVehicleDataKey, JSON.stringify(vehicleData));
 
-            Keychain.set(MY_BMW_VEHICLE_UPDATE_LAST_AT, String(new Date().valueOf()));
-            Keychain.set(MY_BMW_VEHICLE_DATA, JSON.stringify(vehicleData));
-            return vehicles[0];
+            return vehicleData;
         }
 
         console.error('Load vehicle failed');
@@ -1189,9 +1278,8 @@ class Widget extends Base {
     }
 
     async checkInDaily(access_token) {
-        // TODO: set check in during hours in the day
         let dateFormatter = new DateFormatter();
-        const lastCheckIn = Keychain.get(MY_BMW_LAST_CHECK_IN_AT);
+        const lastCheckIn = Keychain.contains(MY_BMW_LAST_CHECK_IN_AT) ? Keychain.get(MY_BMW_LAST_CHECK_IN_AT) : null;
 
         dateFormatter.dateFormat = 'yyyy-MM-dd';
         let today = dateFormatter.string(new Date());
@@ -1267,7 +1355,8 @@ class Widget extends Base {
         } catch (e) {
             let ctx = new DrawContext();
             ctx.size = new Size(100, 100);
-            ctx.setFillColor(Color.red());
+            ctx.setFillColor(new Color('#eee', 1));
+            ctx.drawTextInRect(e.message || '获取车辆图片失败', new Rect(20, 20, 100, 100));
             ctx.fillRect(new Rect(0, 0, 100, 100));
             return await ctx.getImage();
         }
