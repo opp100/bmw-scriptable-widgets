@@ -18,7 +18,7 @@
 ### 特别鸣谢
 感谢POPO大佬帮助UI建设。
 
-感谢胡总、吹雪和部分群友，提供思路帮助与测试
+感谢胡总、吹雪、沙包、以及部分群友，提供思路帮助与测试
 
 ### License
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
