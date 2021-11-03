@@ -256,14 +256,13 @@ class Widget extends Base {
         const fileManager = FileManager[module.filename.includes('Documents/iCloud~') ? 'iCloud' : 'local']();
 
         return await Promise.all(
-            [].map(async (js) => {
+            ['jsencrypt.js'].map(async (js) => {
                 try {
                     let filePath = fileManager.joinPath(fileManager.documentsDirectory(), js);
                     let fileExists = fileManager.fileExists(filePath);
 
                     if (fileExists) {
-                        console.warn('Dependency found: ' + fileExists); // TODO: verify file?
-                        return;
+                        return console.warn('Dependency found: ' + js); // TODO: verify file?;
                     }
 
                     const req = new Request(`https://bmw-linker.yocky.info/lib/${encodeURIComponent(js)}`);
@@ -1099,24 +1098,24 @@ class Widget extends Base {
 
     async getAccessToken() {
         let accessToken = '';
-        // if (Keychain.contains(MY_BMW_TOKEN_UPDATE_LAST_AT)) {
-        //     let lastUpdate = parseInt(Keychain.get(MY_BMW_TOKEN_UPDATE_LAST_AT));
-        //     if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
-        //         if (Keychain.contains(MY_BMW_TOKEN)) {
-        //             accessToken = Keychain.get(MY_BMW_TOKEN);
-        //         }
-        //     } else {
-        //         if (Keychain.contains(MY_BMW_REFRESH_TOKEN)) {
-        //             let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
-        //             // get refresh token
-        //             accessToken = await this.refreshToken(refreshToken);
-        //         }
-        //     }
-        // }
+        if (Keychain.contains(MY_BMW_TOKEN_UPDATE_LAST_AT)) {
+            let lastUpdate = parseInt(Keychain.get(MY_BMW_TOKEN_UPDATE_LAST_AT));
+            if (lastUpdate > new Date().valueOf() - 1000 * 60 * 50) {
+                if (Keychain.contains(MY_BMW_TOKEN)) {
+                    accessToken = Keychain.get(MY_BMW_TOKEN);
+                }
+            } else {
+                if (Keychain.contains(MY_BMW_REFRESH_TOKEN)) {
+                    let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
+                    // get refresh token
+                    accessToken = await this.refreshToken(refreshToken);
+                }
+            }
+        }
 
-        // if (accessToken && accessToken != '') {
-        //     return accessToken;
-        // }
+        if (accessToken && accessToken != '') {
+            return accessToken;
+        }
 
         console.log('No token found, get again');
         const res = await this.myBMWLogin();
@@ -1153,6 +1152,7 @@ class Widget extends Base {
 
         req.headers = BMW_HEADERS;
 
+        console.log('trying to login');
         const res = await req.loadJSON();
         if (res.code == 200) {
             return res.data;
@@ -1167,24 +1167,17 @@ class Widget extends Base {
     async getEncryptedPassword() {
         let publicKey = await this.getPublicKey();
 
-        let req = new Request('https://www.bejson.com/Bejson/Api/Rsa/pubEncrypt');
+        try {
+            // 感谢沙包大佬提供思路
+            let JSEncrypt = importModule('jsencrypt');
 
-        req.method = 'POST';
-        req.headers = {
-            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8'
-        };
+            let encrypt = new JSEncrypt();
+            encrypt.setPublicKey(publicKey);
 
-        req.addParameterToMultipart('publicKey', publicKey);
-        req.addParameterToMultipart('encStr', encodeURIComponent(this.userConfigData.password));
-        req.addParameterToMultipart('etype', 'rsa1');
-
-        const res = await req.loadJSON();
-        if (res.code == 200) {
-            return res.data;
-        } else {
-            console.log('Encrypted password error');
-            console.log(res);
-            return await this.renderError('Encrypted PWD错误');
+            return encrypt.encrypt(this.userConfigData.password);
+        } catch (e) {
+            console.error(' error ' + e.message);
+            return null;
         }
     }
 
