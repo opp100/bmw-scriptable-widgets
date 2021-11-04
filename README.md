@@ -11,6 +11,8 @@
 ![Alt text](/screenshots/example_1.PNG?raw=true "使用案例")
 
 ## 如何开发
+*开发需要nodejs环境，建议使用 [nvm](https://github.com/nvm-sh/nvm) 搭建node环境。
+
 在终端中运行以下命令
 ```bash
 npm install
