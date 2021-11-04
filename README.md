@@ -8,7 +8,8 @@
 小组件本身不需要服务器支持。
 
 ## 小组件效果
-![Alt text](/screenshots/example_1.PNG?raw=true "使用案例")
+<!-- !["效果图"](/screenshots/sc_1.png?raw=true) -->
+<img src="screenshots/sc_1.png?raw=true" width="80%">
 
 ## 如何开发
 *开发需要nodejs环境，建议使用 [nvm](https://github.com/nvm-sh/nvm) 搭建node环境。
