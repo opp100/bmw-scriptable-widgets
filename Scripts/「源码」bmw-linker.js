@@ -14,7 +14,7 @@ const {Base} = require('./「小件件」开发环境');
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
 let WIDGET_VERSION = 'v2.0.5';
-let WIDGET_BUILD = '21110401';
+let WIDGET_BUILD = '21110402';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -24,7 +24,7 @@ let DEPENDENCIES = [
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
-let APP_HOST_SERVER = 'https://bmw-linker.yocky.info/';
+let APP_HOST_SERVER = 'https://bmw-linker.yocky.info';
 let JS_CDN_SERVER = 'https://cdn.jsdelivr.net/gh/opp100/bmw-scriptable-widgets@main/lib';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';

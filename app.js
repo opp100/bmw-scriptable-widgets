@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -6,7 +8,7 @@ const child_process = require('child_process');
 const multer = require('multer');
 const bodyParser = require('body-parser');
 
-const HTTP_PORT = 5566;
+const HTTP_PORT = process.env.DEV_SERVER_PORT || 5566;
 const WORK_DIR = path.dirname(__filename);
 const SCRIPTS_DIR = path.join(WORK_DIR, 'Scripts');
 const PUBLISH_DIR = path.join(WORK_DIR, 'Publish');
@@ -23,7 +25,7 @@ app.use(
 );
 app.use(bodyParser.json());
 
-const _ip = getIPAdress();
+const _ip = process.env.DEV_SERVER || getIPAdress();
 
 app.get('/', (req, res) => {
     let html = fs.readFileSync(path.join(WORK_DIR, 'guide.html')).toString();

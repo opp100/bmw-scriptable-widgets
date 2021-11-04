@@ -4,3 +4,4 @@ Widget.js
 .DS_File
 Dist/
 example.json
+.env
