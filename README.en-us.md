@@ -3,7 +3,7 @@
 ## What's this about?
 This project is a pure Node JS widget which can be used on [Scriptable](https://scriptable.app).
 
-The main purpose is the load data from My BMW API and get related information, then display it into the desktop of iOS ( > 13) devices.
+The main purpose of this project is the load vehicle related information from, then display them into the desktop of iOS ( > 13) devices.
 
 其他语言版本: [中文](README.md).
 
@@ -11,9 +11,11 @@ The main purpose is the load data from My BMW API and get related information, t
 !["Screenshot"](/screenshots/sc_1.png?raw=true)
 
 ## How to Develop
-* NodeJS is required，recommend using  [nvm](https://github.com/nvm-sh/nvm) to setup Node environment easily.
+*NodeJS is required，recommend using  [nvm](https://github.com/nvm-sh/nvm) to setup Node environment easily.
 
-Run following command in you Terminal
+*[VSCode](https://code.visualstudio.com/) is suggested as IDE for this project
+
+Run following commands in you Terminal
 ```bash
 npm install
 npm start

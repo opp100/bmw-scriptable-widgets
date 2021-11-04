@@ -13,6 +13,8 @@ More languages: [English](README.en-us.md).
 ## 如何开发
 *开发需要nodejs环境，建议使用 [nvm](https://github.com/nvm-sh/nvm) 搭建node环境。
 
+*建议使用[VSCode](https://code.visualstudio.com/)作为IDE来开发此程序
+
 在终端中运行以下命令
 ```bash
 npm install
@@ -23,7 +25,6 @@ npm start
 *如果IP不正确，可以添加一个`.env`文件，然后放入电脑的IP和端口
 ```
 DEV_SERVER=192.168.1.123
-DEV_SERVER_PORT=5566
 ```
 
 ## 「小件件」开发框架
