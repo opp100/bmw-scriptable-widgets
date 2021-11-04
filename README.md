@@ -5,7 +5,7 @@
 
 主要用于从My BMW API中获取车辆相关信息并以小组件的形式展示到iOS设备上。
 
-小组件本身不需要服务器支持。
+More languages: [English](README.en-us.md).
 
 ## 小组件效果
 !["效果图"](/screenshots/sc_1.png?raw=true)
