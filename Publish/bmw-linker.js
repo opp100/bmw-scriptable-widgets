@@ -758,7 +758,7 @@ let DEPENDENCIES = [
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
-let APP_HOST_SERVER = 'https://cdn.jsdelivr.net/gh/opp100/bmw-scriptable-widgets@latest/Publish/';
+let APP_HOST_SERVER = 'https://bmw-linker.yocky.cn';
 let JS_CDN_SERVER = 'https://cdn.jsdelivr.net/gh/opp100/bmw-scriptable-widgets/lib';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
