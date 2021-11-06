@@ -35,8 +35,7 @@ let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICaqu6.png';
 // header is might be used for preventing the bmw block the external api?
 let BMW_HEADERS = {
     'user-agent': 'Dart/2.10 (dart:io)',
-    'x-user-agent': 'ios(15.0.2);bmw;1.6.6(10038)',
-    host: 'myprofile.bmw.com.cn'
+    'x-user-agent': 'ios(15.0.2);bmw;1.6.6(10038)'
 };
 
 // setup local storage keys
@@ -260,20 +259,39 @@ class Widget extends Base {
     }
 
     async getDependencies() {
-        const fileManager = FileManager[module.filename.includes('Documents/iCloud~') ? 'iCloud' : 'local']();
+        const fileManager = FileManager['local']();
         let folder = fileManager.documentsDirectory();
+
+        let libFolder = fileManager.joinPath(folder, 'lib');
+        try {
+            fileManager.remove(libFolder);
+            if (!fileManager.isDirectory(libFolder)) {
+                fileManager.createDirectory(libFolder);
+            }
+        } catch (e) {
+            console.error(e.message);
+        }
 
         return await Promise.all(
             DEPENDENCIES.map(async (js) => {
                 try {
-                    // TODO: for download the file to lib folder
-                    let filePath = fileManager.joinPath(folder, WIDGET_PREFIX + js);
-                    console.warn(filePath);
+                    let jsName = js.replace('.js', '');
+                    let jsFolder = fileManager.joinPath(libFolder, jsName);
 
+                    try {
+                        if (fileManager.isDirectory(libFolder)) {
+                            fileManager.createDirectory(jsFolder);
+                        }
+                    } catch (e) {
+                        console.error(e.message);
+                    }
+
+                    // download the file to lib folder
+                    let filePath = fileManager.joinPath(jsFolder, 'index.js');
                     let fileExists = fileManager.fileExists(filePath);
 
                     if (fileExists) {
-                        return console.warn('Dependency found: ' + js); // TODO: verify file?;
+                        return console.warn('Dependency found: ' + filePath);
                     }
 
                     const req = new Request(`${JS_CDN_SERVER}/${encodeURIComponent(js)}`);
@@ -291,8 +309,10 @@ class Widget extends Base {
                         this.notify('BMW LINKER错误', '下载依赖文件失败，请重新尝试配置');
                     }
 
-                    return console.warn('Dependency found: ' + fileExists); // TODO: verify file?;
-                } catch (e) {}
+                    return console.warn('Dependency found: ' + filePath);
+                } catch (e) {
+                    console.error(e.message);
+                }
             })
         );
     }
@@ -1201,7 +1221,7 @@ class Widget extends Base {
 
         try {
             // 感谢沙包大佬提供思路
-            let JSEncrypt = importModule(`${WIDGET_PREFIX}jsencrypt`);
+            let JSEncrypt = importModule(`lib/jsencrypt`);
 
             let encrypt = new JSEncrypt();
             encrypt.setPublicKey(publicKey);
