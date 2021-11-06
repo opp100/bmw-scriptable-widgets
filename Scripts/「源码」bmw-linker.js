@@ -264,7 +264,6 @@ class Widget extends Base {
 
         let libFolder = fileManager.joinPath(folder, 'lib');
         try {
-            fileManager.remove(libFolder);
             if (!fileManager.isDirectory(libFolder)) {
                 fileManager.createDirectory(libFolder);
             }
@@ -541,7 +540,7 @@ class Widget extends Base {
             this.checkUpdate(true);
         } catch (e) {}
 
-        const data = await this.getData();
+        let data = await this.getData();
 
         if (data == null) {
             return await this.renderError('获取车辆信息失败，请检查授权');
