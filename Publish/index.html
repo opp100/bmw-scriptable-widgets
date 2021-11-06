@@ -31,6 +31,15 @@
             </p>
         </div>
         <main class="flex-shrink-0 gradient-background">
+            <div class="text-end text-light" style="padding:0.2em 0.5em;">
+                <a href="https://github.com/opp100/bmw-scriptable-widgets" class="link-light" target="_blank">
+                    <small>源代码 GitHub</small>
+                </a>
+                    <small> | </small>
+                <a class="link-light" href="https://mobile20-express.bmw.com.cn/index.html" target="_blank">
+                    <small>下载 My BMW</small> 
+                </a>
+            </div>
             <div class="container text-center">
                 <div class="">
                     <h1 class="mt-5" style="color: #fff">BMW Linker</h1>
@@ -71,14 +80,14 @@
                 <br />
                 <div>
                     <h5>2. 点击 复制代码</h5>
-                    <a type="button" id="copy" onclick="copy()" class="btn btn-success" disabled href="#">复制代码</a>
+                    <a id="copy" onclick="copy()" class="btn btn-success" disabled href="#">复制代码</a>
                     <textarea id="js-text-area" rows="20" readonly style="min-width: 400px"></textarea>
                 </div>
                 <br />
                 <br />
                 <div>
                     <h5>3. 点击 打开Scriptable, 点击 ➕，粘贴至空白处，运行 ▶️</h5>
-                    <a id="open" type="button" class="btn btn-info" href="scriptable:///add?scriptName=BMW_LINKER安装器"
+                    <a id="open" class="btn btn-info" href="scriptable:///add?scriptName=BMW_LINKER安装器"
                         >打开 Scriptable</a
                     >
                 </div>
@@ -117,7 +126,7 @@
     </body>
     <style>
         .gradient-background {
-            background: linear-gradient(#6887d1 0%,  #fff 11%);
+            background: linear-gradient(#6887d1 0%, #fff 11%);
         }
 
         #js-text-area {
