@@ -278,7 +278,7 @@ class Widget extends Base {
                     let jsFolder = fileManager.joinPath(libFolder, jsName);
 
                     try {
-                        if (fileManager.isDirectory(libFolder)) {
+                        if (!fileManager.isDirectory(jsFolder)) {
                             fileManager.createDirectory(jsFolder);
                         }
                     } catch (e) {
@@ -739,7 +739,7 @@ class Widget extends Base {
 
             let displayFont = WIDGET_FONT;
             let displayFontColor = fontColor;
-            if (data.status.doorsGeneralState != '已上锁') {
+            if (data.properties && !data.properties.areDoorsClosed) {
                 displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
                 displayFont = WIDGET_FONT_BOLD;
             }
@@ -886,7 +886,7 @@ class Widget extends Base {
 
             let displayFont = WIDGET_FONT;
             let displayFontColor = fontColor;
-            if (data.status.doorsGeneralState != '已上锁') {
+            if (data.properties && !data.properties.areDoorsClosed) {
                 displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
                 displayFont = WIDGET_FONT_BOLD;
             }
@@ -955,7 +955,7 @@ class Widget extends Base {
 
             let displayFont = WIDGET_FONT;
             let displayFontColor = fontColor;
-            if (doorWindowStatus.state != '已关闭') {
+            if (data.properties && !data.properties.areWindowsClosed) {
                 displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
                 displayFont = WIDGET_FONT_BOLD;
             }
