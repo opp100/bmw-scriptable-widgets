@@ -146,11 +146,7 @@ class Base {
       return img
     } catch (e) {
       // 没有缓存+失败情况下，返回自定义的绘制图片（红色背景）
-      let ctx = new DrawContext()
-      ctx.size = new Size(100, 100)
-      ctx.setFillColor(Color.red())
-      ctx.fillRect(new Rect(0, 0, 100, 100))
-      return await ctx.getImage()
+        throw new Error('加载图片失败');
     }
   }
 
