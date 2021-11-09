@@ -795,6 +795,8 @@ class Widget extends Base {
         let paddingTop = Math.round(height * 0.09);
         let paddingLeft = Math.round(width * 0.055);
 
+        let renderMediumContent = !renderLarge || this.userConfigData.map_api_key;
+
         const topContainer = w.addStack();
         topContainer.layoutHorizontally();
 
@@ -832,7 +834,10 @@ class Widget extends Base {
         const leftContainer = bodyContainer.addStack();
 
         leftContainer.layoutVertically();
-        leftContainer.size = new Size(width * 0.55, Math.ceil(height * 0.75));
+        leftContainer.size = new Size(width * 0.85, Math.ceil(height * 0.75));
+        if (renderMediumContent) {
+            leftContainer.size = new Size(width * 0.55, Math.ceil(height * 0.75));
+        }
 
         leftContainer.addSpacer();
 
@@ -914,37 +919,197 @@ class Widget extends Base {
         leftContainer.addSpacer();
 
         const locationContainer = leftContainer.addStack();
-        locationContainer.setPadding(0, paddingLeft, 16, Math.ceil(width * 0.1));
-
+        locationContainer.setPadding(0, paddingLeft, 0, 0);
+        if (renderMediumContent) {
+            locationContainer.setPadding(0, paddingLeft, 16, Math.ceil(width * 0.1));
+        }
         const locationText = locationContainer.addText(locationStr);
         locationText.font = this.getFont(`${WIDGET_FONT}`, 10);
         locationText.textColor = fontColor;
         locationText.textOpacity = 0.5;
         locationText.url = this.buildMapURL(data);
 
-        const rightContainer = bodyContainer.addStack();
-        rightContainer.setPadding(8, 0, 0, 12);
-        rightContainer.layoutVertically();
-        rightContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.75));
+        if (renderMediumContent) {
+            const rightContainer = bodyContainer.addStack();
+            rightContainer.setPadding(8, 0, 0, 12);
+            rightContainer.layoutVertically();
+            rightContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.75));
 
-        rightContainer.addSpacer();
+            rightContainer.addSpacer();
 
-        const carImageContainer = rightContainer.addStack();
-        carImageContainer.setPadding(0, 0, 10, paddingTop);
-        carImageContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.45));
+            const carImageContainer = rightContainer.addStack();
+            carImageContainer.setPadding(0, 0, 10, paddingTop);
+            carImageContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.45));
+
+            carImageContainer.bottomAlignContent();
+
+            try {
+                let imageCar = await this.getVehicleImage(data);
+                let carImage = carImageContainer.addImage(imageCar);
+                carImage.rightAlignImage();
+            } catch (e) {}
+
+            if (data.status && data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
+                let doorWindowStatus = data.status.doorsAndWindows[0];
+
+                let windowStatusContainer = rightContainer.addStack();
+                windowStatusContainer.setPadding(0, 0, 16, 0);
+
+                windowStatusContainer.layoutHorizontally();
+                windowStatusContainer.addSpacer();
+
+                let windowStatus = `${doorWindowStatus.title} ${doorWindowStatus.state} `;
+                let windowStatusText = windowStatusContainer.addText(windowStatus);
+
+                let displayFont = WIDGET_FONT;
+                let displayFontColor = fontColor;
+                if (data.properties && !data.properties.areWindowsClosed) {
+                    displayFontColor = new Color(WIDGET_DANGER_COLOR, 1);
+                    displayFont = WIDGET_FONT_BOLD;
+                }
+
+                windowStatusText.font = this.getFont(displayFont, 10);
+                windowStatusText.textColor = displayFontColor;
+                windowStatusText.textOpacity = 0.5;
+
+                windowStatusContainer.addSpacer();
+            }
+        }
+
+        w.url = 'de.bmw.connected.mobile20.cn://';
+
+        return w;
+    }
+
+    async renderLarge(data) {
+        let w = await this.renderMedium(data, true);
+        const {width, height} = data.size['large'];
+        w.setPadding(0, 0, 0, 0);
+        w.addSpacer();
+        let fontColor = this.getFontColor();
+
+        let mapWidth = Math.ceil(width);
+        let mapHeight = Math.ceil(height * 0.5);
+
+        let paddingLeft = Math.round(width * 0.055);
+
+        let largeExtraContainer = w.addStack();
+        largeExtraContainer.layoutVertically();
+        largeExtraContainer.bottomAlignContent();
+
+        largeExtraContainer.size = new Size(mapWidth, mapHeight);
+
+        if (this.userConfigData.map_api_key && this.userConfigData.map_api_key.length > 0) {
+            let latLng = null;
+            try {
+                latLng =
+                    data.properties.vehicleLocation.coordinates.longitude +
+                    ',' +
+                    data.properties.vehicleLocation.coordinates.latitude;
+            } catch (e) {}
+
+            let mapImage = await this.loadMapView(latLng, mapWidth, mapHeight);
+            largeExtraContainer.addImage(mapImage);
+            largeExtraContainer.url = this.buildMapURL(data);
+
+            return w;
+        }
+
+        const carImageContainer = largeExtraContainer.addStack();
+        carImageContainer.layoutHorizontally();
+
+        carImageContainer.setPadding(0, paddingLeft, 0, 0);
 
         carImageContainer.bottomAlignContent();
 
         try {
-            let imageCar = await this.getVehicleImage(data);
-            let carImage = carImageContainer.addImage(imageCar);
-            carImage.rightAlignImage();
-        } catch (e) {}
+            let canvas = new DrawContext();
+            let canvasWidth = Math.round(width);
+            let canvasHeight = Math.round(height * 0.5);
+            console.warn('canvasWidth ' + canvasWidth);
+            console.warn('canvasHeight ' + canvasHeight);
+
+            canvas.size = new Size(canvasWidth, canvasHeight);
+            canvas.opaque = false;
+            canvas.setFont(this.getFont(WIDGET_FONT_BOLD, Math.round(canvasHeight / 3.5)));
+            canvas.setTextColor(this.getFontColor());
+            canvas.respectScreenScale = true;
+
+            try {
+                let checkControlMessages = data.status.checkControlMessages.filter((checkControlMessage) => {
+                    return checkControlMessage['criticalness'] != 'nonCritical';
+                });
+
+                if (checkControlMessages && checkControlMessages.length == 0) {
+                    canvas.drawTextInRect(
+                        'ALL',
+                        new Rect(
+                            0, //
+                            0,
+                            Math.round(canvasWidth * 0.5),
+                            Math.round(canvasWidth * 0.5)
+                        )
+                    );
+                    canvas.drawTextInRect(
+                        'GOOD',
+                        new Rect(
+                            0,
+                            Math.round(canvasHeight / 3.5 - 5),
+                            Math.round(canvasWidth * 0.5),
+                            Math.round(canvasWidth * 0.5)
+                        )
+                    );
+                } else {
+                    let messageFontSize = Math.round(canvasHeight / 12);
+                    let messageOffset = 0;
+
+                    canvas.setFont(this.getFont(WIDGET_FONT_BOLD, messageFontSize));
+                    canvas.setTextColor(new Color('#f00', 1));
+
+                    for (const checkControlMessage of checkControlMessages) {
+                        canvas.drawTextInRect(
+                            checkControlMessage.title,
+                            new Rect(0, messageOffset, Math.round(canvasWidth * 0.5), Math.round(canvasWidth * 0.5))
+                        );
+
+                        messageOffset = messageOffset + messageFontSize;
+                    }
+                }
+            } catch (e) {
+                console.warn(e.message);
+            }
+
+            let carImage = await this.getVehicleImage(data);
+            let imageSize = this.getImageSize(carImage.size.width, carImage.size.height, canvasWidth, canvasHeight);
+
+            console.warn('rate ' + imageSize.width / imageSize.height);
+            console.warn('imageSize ' + JSON.stringify(imageSize));
+
+            canvas.drawImageInRect(
+                carImage,
+                new Rect(
+                    Math.round(canvasWidth * 0.15), //
+                    Math.round(canvasHeight * 0.3),
+                    imageSize.width,
+                    imageSize.height
+                )
+            );
+
+            let image = canvas.getImage();
+            let carStatusImage = carImageContainer.addImage(image);
+
+            carStatusImage.centerAlignImage();
+            carStatusImage.url = 'de.bmw.connected.mobile20.cn://';
+        } catch (e) {
+            console.log(e.message);
+        }
 
         if (data.status && data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
+            largeExtraContainer.addSpacer();
+
             let doorWindowStatus = data.status.doorsAndWindows[0];
 
-            let windowStatusContainer = rightContainer.addStack();
+            let windowStatusContainer = largeExtraContainer.addStack();
             windowStatusContainer.setPadding(0, 0, 16, 0);
 
             windowStatusContainer.layoutHorizontally();
@@ -967,38 +1132,33 @@ class Widget extends Base {
             windowStatusContainer.addSpacer();
         }
 
-        w.url = 'de.bmw.connected.mobile20.cn://';
-
         return w;
     }
 
-    async renderLarge(data) {
-        let w = await this.renderMedium(data, true);
-        const {width, height} = data.size['large'];
-        w.setPadding(0, 0, 0, 0);
-        w.addSpacer();
+    getImageSize(imageWidth, imageHeight, canvasWidth, canvasHeight) {
+        let a = imageWidth;
+        let b = imageHeight;
 
-        let largeExtraContainer = w.addStack();
-        largeExtraContainer.bottomAlignContent();
+        let c = Math.sqrt(Math.pow(imageWidth, 2) + Math.pow(imageHeight, 2));
+        let canvasC = Math.sqrt(Math.pow(canvasWidth, 2) + Math.pow(canvasHeight, 2));
 
-        let mapWidth = Math.ceil(width);
-        let mapHeight = Math.ceil(height * 0.5);
+        if (c > canvasC) {
+            c = c * 0.8;
 
-        largeExtraContainer.size = new Size(mapWidth, mapHeight);
+            if (a > b) {
+                let k = a / b;
+                b = Math.sqrt(Math.pow(c, 2) / (Math.pow(k, 2) + 1));
+                a = b * k;
+            } else {
+                let k = b / a;
+                a = Math.sqrt(Math.pow(c, 2) / (Math.pow(k, 2) + 1));
+                b = a * k;
+            }
 
-        let latLng = null;
-        try {
-            latLng =
-                data.properties.vehicleLocation.coordinates.longitude +
-                ',' +
-                data.properties.vehicleLocation.coordinates.latitude;
-        } catch (e) {}
+            return this.getImageSize(a, b, canvasWidth, canvasHeight);
+        }
 
-        let mapImage = await this.loadMapView(latLng, mapWidth, mapHeight);
-        largeExtraContainer.addImage(mapImage);
-        largeExtraContainer.url = this.buildMapURL(data);
-
-        return w;
+        return {width: a, height: b};
     }
 
     async loadMapView(latLng, width, height, useCache = true) {
@@ -1038,14 +1198,14 @@ class Widget extends Base {
         } catch (e) {
             console.log('load map failed');
             console.error(e.message);
-            let ctx = new DrawContext();
-            ctx.size = new Size(width, height);
+            let canvas = new DrawContext();
+            canvas.size = new Size(width, height);
 
-            ctx.setFillColor(new Color('#eee'));
-            ctx.fillRect(new Rect(0, 0, width, height));
-            ctx.drawTextInRect(e.message || '获取地图失败', new Rect(20, 20, width, height));
+            canvas.setFillColor(new Color('#eee'));
+            canvas.fillRect(new Rect(0, 0, width, height));
+            canvas.drawTextInRect(e.message || '获取地图失败', new Rect(20, 20, width, height));
 
-            return await ctx.getImage();
+            return await canvas.getImage();
         }
     }
 
@@ -1270,9 +1430,7 @@ class Widget extends Base {
                 let cachedVehicleData = JSON.parse(Keychain.get(localVehicleDataKey));
 
                 // load data every 5 mins
-                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 1 && cachedVehicleData && cachedVehicleData.vin) {
-                    console.log('Get vehicle data from cache');
-
+                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 5 && cachedVehicleData && cachedVehicleData.vin) {
                     return cachedVehicleData;
                 }
             }
@@ -1396,12 +1554,14 @@ class Widget extends Base {
 
             return img;
         } catch (e) {
-            let ctx = new DrawContext();
-            ctx.size = new Size(100, 100);
-            ctx.setFillColor(new Color('#eee', 1));
-            ctx.drawTextInRect(e.message || '获取车辆图片失败', new Rect(20, 20, 100, 100));
-            ctx.fillRect(new Rect(0, 0, 100, 100));
-            return await ctx.getImage();
+            let canvas = new DrawContext();
+            canvas.size = new Size(150, 150);
+            canvas.opaque = false;
+            canvas.respectScreenScale = true;
+
+            canvas.drawTextInRect(e.message || '获取车辆图片失败', new Rect(20, 20, 100, 100));
+
+            return await canvas.getImage();
         }
     }
 
