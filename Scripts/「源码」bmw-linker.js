@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.5';
-let WIDGET_BUILD = '21110402';
+let WIDGET_VERSION = 'v2.0.6';
+let WIDGET_BUILD = '21110901';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [

@@ -14,4 +14,4 @@ await Promise.all(
 );
 
 FILE_MGR.remove(module.filename);
-Safari.open('scriptable:///open?scriptName=');
+Safari.open('scriptable:///run?scriptName=' + encodeURIComponent('bmw-linker.js'));
