@@ -583,7 +583,7 @@ var mul_table=[512,512,456,512,328,456,335,512,405,328,271,456,388,335,292,512,4
    * @param {string} body 通知内容
    * @param {string} url 点击后打开的URL
    */
-  async notify (title, body, url, opts = {}) {
+  async notify (title, body, url = null, opts = {}) {
     let n = new Notification()
     n = Object.assign(n, opts);
     n.title = title

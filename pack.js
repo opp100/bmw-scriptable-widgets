@@ -15,9 +15,9 @@ if (process.argv.length !== 3) {
   process.exit(0)
 }
 
-const SAVE_PATH = path.join(__dirname, "Dist")
+const SAVE_PATH = path.join(__dirname, "Publish")
 const file_name = process.argv[2]
-const out_name = file_name.replace("「源码」", "").replace("Scripts", "Dist");
+const out_name = file_name.replace("「源码」", "").replace("Scripts", "Publish");
 
 // 创建目录
 if (!fs.existsSync(SAVE_PATH)) {

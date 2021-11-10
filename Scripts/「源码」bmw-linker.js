@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.6';
-let WIDGET_BUILD = '21110901';
+let WIDGET_VERSION = 'v2.0.7';
+let WIDGET_BUILD = '21110902';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -24,7 +24,7 @@ let DEPENDENCIES = [
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
 let BMW_SERVER_HOST = 'https://myprofile.bmw.com.cn';
-let APP_HOST_SERVER = 'https://bmw-linker.yocky.cn';
+let APP_HOST_SERVER = 'https://bmw-linker.com';
 let JS_CDN_SERVER = 'https://cdn.jsdelivr.net/gh/opp100/bmw-scriptable-widgets/lib';
 
 let DEFAULT_BG_COLOR_LIGHT = '#FFFFFF';
@@ -129,6 +129,8 @@ class Widget extends Base {
         this.appColorData = {...this.appColorData, ...colorSettings};
 
         if (config.runsInApp) {
+            this.registerAction('退出登录', this.userCleanAlert);
+            this.registerAction('关于', this.aboutAction);
             this.registerAction('检查更新', this.checkUpdatePress);
             this.registerAction('配置小组件', this.setWidgetConfig);
         }
@@ -150,12 +152,66 @@ class Widget extends Base {
             console.log('User denied');
             Keychain.set(APP_USE_AGREEMENT, 'false');
             return;
-        } else {
-            Keychain.set(APP_USE_AGREEMENT, 'true');
         }
+        Keychain.set(APP_USE_AGREEMENT, 'true');
 
         await this.userLoginCredentials();
         await this.colorSetPickUp();
+    }
+
+    async userCleanAlert() {
+        const confirmationAlert = new Alert();
+
+        confirmationAlert.title = '提示';
+        confirmationAlert.message = '您的所有账户信息与设置将会从小组件中移除';
+
+        confirmationAlert.addAction('退出登录');
+        confirmationAlert.addCancelAction('取消');
+
+        const userSelection = await confirmationAlert.presentAlert();
+        if (userSelection == -1) {
+            return;
+        }
+
+        try {
+            if (this.SETTING_KEY && Keychain.contains(this.SETTING_KEY)) {
+                Keychain.remove(this.SETTING_KEY);
+            }
+        } catch (e) {
+            console.error(e.message);
+        }
+
+        try {
+            let _fileKey = this.md5(Script.name());
+            if (_fileKey && Keychain.contains(_fileKey)) {
+                Keychain.remove(_fileKey);
+            }
+        } catch (e) {
+            console.error(e.message);
+        }
+
+        let keyStoreArray = [
+            MY_BMW_LAST_CHECK_IN_AT,
+            MY_BMW_REFRESH_TOKEN,
+            MY_BMW_TOKEN,
+            MY_BMW_TOKEN_UPDATE_LAST_AT,
+            MY_BMW_VEHICLE_UPDATE_LAST_AT,
+            APP_USE_AGREEMENT,
+            WIDGET_UPDATED_AT
+        ];
+        for (const key of keyStoreArray) {
+            try {
+                if (Keychain.contains(key)) {
+                    Keychain.remove(key);
+                }
+            } catch (e) {}
+        }
+
+        this.notify('退出成功', '账户设置信息已经从小组件中删除');
+    }
+
+    async aboutAction() {
+        Safari.open(APP_HOST_SERVER)
     }
 
     async userLoginCredentials() {
@@ -193,7 +249,7 @@ class Widget extends Base {
 
         // write to local
         this.settings['UserConfig'] = this.userConfigData;
-        this.saveSettings();
+        this.saveSettings(false);
 
         await this.userConfigInput();
     }
@@ -410,7 +466,7 @@ class Widget extends Base {
 
         // write to local
         this.settings['UserConfig'] = this.userConfigData;
-        this.saveSettings();
+        this.saveSettings(false);
     }
 
     async colorSetPickUp() {
@@ -801,6 +857,7 @@ class Widget extends Base {
         topContainer.layoutHorizontally();
 
         const vehicleNameContainer = topContainer.addStack();
+        vehicleNameContainer.layoutHorizontally();
         vehicleNameContainer.setPadding(paddingTop, paddingLeft, 0, 0);
 
         let vehicleNameStr = `${data.brand} ${data.model}`;
@@ -817,11 +874,11 @@ class Widget extends Base {
 
         vehicleNameText.font = this.getFont(`${WIDGET_FONT_BOLD}`, vehicleNameSize);
         vehicleNameText.textColor = fontColor;
+        vehicleNameContainer.addSpacer();
 
         const logoImageContainer = topContainer.addStack();
         logoImageContainer.layoutHorizontally();
         logoImageContainer.setPadding(paddingTop, 0, 0, paddingTop);
-        logoImageContainer.addSpacer();
 
         try {
             let logoImage = logoImageContainer.addImage(await this.getAppLogo());
@@ -1016,16 +1073,14 @@ class Widget extends Base {
         }
 
         const carImageContainer = largeExtraContainer.addStack();
-        carImageContainer.layoutHorizontally();
-
-        carImageContainer.setPadding(0, paddingLeft, 0, 0);
+        carImageContainer.setPadding(0, paddingLeft, 0, paddingLeft);
 
         carImageContainer.bottomAlignContent();
 
         try {
             let canvas = new DrawContext();
-            let canvasWidth = Math.round(width);
-            let canvasHeight = Math.round(height * 0.5);
+            let canvasWidth = Math.round(width * 0.9);
+            let canvasHeight = Math.round(height * 0.45);
             console.warn('canvasWidth ' + canvasWidth);
             console.warn('canvasHeight ' + canvasHeight);
 
@@ -1036,9 +1091,7 @@ class Widget extends Base {
             canvas.respectScreenScale = true;
 
             try {
-                let checkControlMessages = data.status.checkControlMessages.filter((checkControlMessage) => {
-                    return checkControlMessage['criticalness'] != 'nonCritical';
-                });
+                let checkControlMessages = this.getControlMessages(data);
 
                 if (checkControlMessages && checkControlMessages.length == 0) {
                     canvas.drawTextInRect(
@@ -1061,7 +1114,7 @@ class Widget extends Base {
                     );
                 } else {
                     let messageFontSize = Math.round(canvasHeight / 12);
-                    let messageOffset = 0;
+                    let messageOffset = 5;
 
                     canvas.setFont(this.getFont(WIDGET_FONT_BOLD, messageFontSize));
                     canvas.setTextColor(new Color('#f00', 1));
@@ -1089,7 +1142,7 @@ class Widget extends Base {
                 carImage,
                 new Rect(
                     Math.round(canvasWidth * 0.15), //
-                    Math.round(canvasHeight * 0.3),
+                    Math.round(canvasHeight * 0.25),
                     imageSize.width,
                     imageSize.height
                 )
@@ -1097,7 +1150,7 @@ class Widget extends Base {
 
             let image = canvas.getImage();
             let carStatusImage = carImageContainer.addImage(image);
-
+            carStatusImage.resizable = false;
             carStatusImage.centerAlignImage();
             carStatusImage.url = 'de.bmw.connected.mobile20.cn://';
         } catch (e) {
@@ -1105,12 +1158,10 @@ class Widget extends Base {
         }
 
         if (data.status && data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
-            largeExtraContainer.addSpacer();
-
             let doorWindowStatus = data.status.doorsAndWindows[0];
 
             let windowStatusContainer = largeExtraContainer.addStack();
-            windowStatusContainer.setPadding(0, 0, 16, 0);
+            windowStatusContainer.setPadding(2, 0, 16, 0);
 
             windowStatusContainer.layoutHorizontally();
             windowStatusContainer.addSpacer();
@@ -1141,16 +1192,16 @@ class Widget extends Base {
 
         let c = Math.sqrt(Math.pow(imageWidth, 2) + Math.pow(imageHeight, 2));
         let canvasC = Math.sqrt(Math.pow(canvasWidth, 2) + Math.pow(canvasHeight, 2));
+        let canvasK = canvasWidth / canvasHeight;
+        let k = a > b ? a / b : b / a;
 
-        if (c > canvasC) {
-            c = c * 0.8;
+        if (Math.round(c * k) > Math.round(canvasC * canvasK * 0.96)) {
+            c = c * 0.9;
 
             if (a > b) {
-                let k = a / b;
                 b = Math.sqrt(Math.pow(c, 2) / (Math.pow(k, 2) + 1));
                 a = b * k;
             } else {
-                let k = b / a;
                 a = Math.sqrt(Math.pow(c, 2) / (Math.pow(k, 2) + 1));
                 b = a * k;
             }
@@ -1206,6 +1257,29 @@ class Widget extends Base {
             canvas.drawTextInRect(e.message || '获取地图失败', new Rect(20, 20, width, height));
 
             return await canvas.getImage();
+        }
+    }
+
+    getControlMessages(data) {
+        try {
+            let checkControlMessages = data.status.checkControlMessages.filter((checkControlMessage) => {
+                return checkControlMessage['criticalness'] != 'nonCritical';
+            });
+
+            if (data.status.issues) {
+                for (const key in data.status.issues) {
+                    if (!data.status.issues[key]) {
+                        continue;
+                    }
+                    if (data.status.issues[key]['title']) {
+                        checkControlMessages.push(data.status.issues[key]);
+                    }
+                }
+            }
+            return checkControlMessages;
+        } catch (e) {
+            console.error(e);
+            return [];
         }
     }
 
