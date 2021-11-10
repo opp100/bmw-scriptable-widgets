@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+  <!-- Basic Page Needs
+  ================================================== -->
+  <meta charset="utf-8">
+  <title>BMW Linker - 小组件安装指导</title>
+
+  <!-- Mobile Specific Metas
+  ================================================== -->
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <meta name="author" content="Yocky">
+  <meta name="generator" content="Themefisher Small Apps Template v1.0">
+
+  <!-- Favicon -->
+  <link rel="shortcut icon" type="image/x-icon" href="images/favicon.png" />
+  
+  <!-- PLUGINS CSS STYLE -->
+  <link rel="stylesheet" href="plugins/bootstrap/bootstrap.min.css">
+  <link rel="stylesheet" href="plugins/themify-icons/themify-icons.css">
+  <link rel="stylesheet" href="plugins/slick/slick.css">
+  <link rel="stylesheet" href="plugins/slick/slick-theme.css">
+  <link rel="stylesheet" href="plugins/fancybox/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="plugins/aos/aos.css">
+
+  <!-- CUSTOM CSS -->
+  <link href="css/style.css" rel="stylesheet">
+
+</head>
+
+<body class="body-wrapper" data-spy="scroll" data-target=".privacy-nav">
+
+<nav class="navbar main-nav navbar-expand-lg px-2 px-sm-0 py-2 py-lg-0">
+    <div class="container">
+        <a class="navbar-brand" href="index.html"><img src="images/logo.png" alt="logo"></a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="ti-menu"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+                <a class="nav-link" href="index.html">主页</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="installation.html">安装教程</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="payment.html">打赏开发者</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="about.html">关于</a>
+            </li>
+        </ul>
+        </div>
+    </div>
+</nav>
+<div class="weixin-tip">
+    <p>
+        <img src="assets/leave_wechat.png" alt="微信打开" />
+    </p>
+</div>
+
+<section class="section page-title">
+	<div class="container">
+		<div class="row">
+			<div class="col-sm-8 m-auto">
+				<div class="">
+                    <h1>BMW Linker</h1>
+                    <h1>小组件安装指导</h1>
+
+                    <span id="version-div" class="text-muted"></span>
+                    <br />
+                    <div>
+                        <a href="https://docs.qq.com/doc/DT2RNTml4d1hmSmlh" class="h4" target="_blank">
+                            &#128221; 帮助与常见问题
+                        </a>
+                    </div>
+                    <br />
+                    <div>
+                        <a href="https://b23.tv/oMgnek" class="h4" target="_blank"> &#128250; 视频教程点这里 </a>
+                    </div>
+                    <br />
+                </div>
+                <br />
+                <br />
+                <h5>1. 下载安装 Scriptable App</h5>
+                <br />
+                <div>
+                    <a
+                        class="appStoreLink"
+                        href="https://apps.apple.com/cn/app/scriptable/id1405459188"
+                        target="_blank"
+                    >
+                        <img
+                            class="appStore img-fluid"
+                            style="max-width: 40%"
+                            src="images/appple-store.jpg"
+                            alt="App Store"
+                        />
+                    </a>
+                </div>
+                <br />
+                <br />
+                <div>
+                    <h5>2. 点击 复制代码</h5>
+                    <a id="copy" onclick="copy()" class="btn btn-success" disabled href="#">复制代码</a>
+                    <textarea id="js-text-area" rows="20" readonly style="min-width: 400px"></textarea>
+                </div>
+                <br />
+                <br />
+                <div>
+                    <h5>3. 点击 打开Scriptable, 点击 ➕，粘贴至空白处，运行 ▶️</h5>
+                    <a id="open" class="btn btn-info" href="scriptable:///add?scriptName=BMW_LINKER安装器"
+                        >打开 Scriptable</a
+                    >
+                </div>
+                <br />
+                <br />
+                <div>
+                    <h5>4. 点击bmw-linker并根据提示完成设置</h5>
+                    <img src="assets/setup_1.png" class="img img-fluid helper-image" />
+                </div>
+                <div>
+                    <h5>5. 在桌面添加小组件</h5>
+                    <img src="assets/widget_helper.png" class="img img-fluid helper-image" />
+                </div>
+			</div>
+		</div>
+	</div>
+</section>
+
+<section class="section cta-hire bg-gary">
+	<div class="container">
+		<div class="row">
+			<div class="col-md-12 text-center">
+                <h3>「遇到问题可查看帮助文档」</h3>
+			</div>
+		</div>
+	</div>
+</section>
+
+<footer>
+    <div class="text-center bg-dark py-4">
+      <small class="text-secondary">Copyright &copy; <script>document.write(new Date().getFullYear())</script>. Yocky Xiang </small class="text-secondary">
+    </div>
+  </footer>
+  
+
+
+  <!-- To Top -->
+  <div class="scroll-top-to">
+    <i class="ti-angle-up"></i>
+  </div>
+  
+  <!-- JAVASCRIPTS -->
+  <script src="plugins/jquery/jquery.min.js"></script>
+  <script src="plugins/bootstrap/bootstrap.min.js"></script>
+  <script src="plugins/slick/slick.min.js"></script>
+  <script src="plugins/fancybox/jquery.fancybox.min.js"></script>
+  <script src="plugins/syotimer/jquery.syotimer.min.js"></script>
+  <script src="plugins/aos/aos.js"></script>
+
+  <script src="js/script.js"></script>
+</body>
+
+<style>
+    .gradient-background {
+        background: linear-gradient(#6887d1 0%, #fff 11%);
+    }
+
+    #js-text-area {
+        display: none;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+    }
+    a {
+        text-decoration: none;
+    }
+    .helper-image {
+        max-width: 100%;
+        height: auto;
+        border-radius: 15px;
+    }
+    .weixin-tip {
+        display: none;
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        filter: alpha(opacity=80);
+        height: 100%;
+        width: 100%;
+        z-index: 100;
+    }
+    .weixin-tip p {
+        text-align: center;
+        margin-top: 10%;
+        padding: 0 5%;
+    }
+</style>
+<script>
+    var copyOK = 0;
+
+    function copy() {
+        var $temp = $('<input>');
+        $('body').append($temp);
+        $temp.val($('#js-text-area').val()).select();
+        document.execCommand('copy');
+        $temp.remove();
+
+        $('#copy').html('复制成功！' + (copyOK > 0 ? '+' + copyOK : ''));
+        copyOK++;
+
+        document.getElementById('open').focus();
+    }
+
+    $(window).on('load', function () {
+        var winHeight = $(window).height();
+        function is_weixin() {
+            var ua = navigator.userAgent.toLowerCase();
+            if (ua.match(/MicroMessenger/i) == 'micromessenger') {
+                return true;
+            } else {
+                return false;
+            }
+        }
+        var isWeixin = is_weixin();
+        if (isWeixin) {
+            $('.weixin-tip').css('height', winHeight);
+            $('.weixin-tip').show();
+        }
+    });
+
+    $(document).ready(() => {
+        $.ajax({
+            url: 'installer.js?date=' + new Date().valueOf(),
+            dataType: 'text',
+            success: (response) => {
+                $('#js-text-area').val(response);
+                $('#copy').removeAttr('disabled');
+            }
+        });
+
+        $.ajax({
+            url: 'version.json?date=' + new Date().valueOf(),
+            dataType: 'json',
+            success: (response) => {
+                if (response) {
+                    $('#version-div').append(
+                        `<small>${response['WIDGET_VERSION']} (${response['WIDGET_BUILD']})</small>`
+                    );
+                }
+            }
+        });
+    });
+</script>
+
+</html>
