@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.7';
-let WIDGET_BUILD = '21111002';
+let WIDGET_VERSION = 'v2.0.8';
+let WIDGET_BUILD = '21111003';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -211,7 +211,7 @@ class Widget extends Base {
     }
 
     async aboutAction() {
-        Safari.open(APP_HOST_SERVER)
+        Safari.open(APP_HOST_SERVER);
     }
 
     async userLoginCredentials() {
@@ -220,7 +220,7 @@ class Widget extends Base {
         userLoginAlert.message = '配置My BMW账号密码';
 
         userLoginAlert.addTextField('账号(您的电话)', this.userConfigData['username']);
-        userLoginAlert.addSecureTextField('密码(不要有特殊字符)', this.userConfigData['password']);
+        userLoginAlert.addSecureTextField('密码(请在MY BMW中提前设置)', this.userConfigData['password']);
 
         userLoginAlert.addAction('确定');
         userLoginAlert.addCancelAction('取消');
@@ -740,8 +740,7 @@ class Widget extends Base {
 
         // ---顶部右边部件---
         const topRightBox = topBox.addStack();
-        topRightBox.size = new Size(0, Math.round(width * 0.17));
-        topRightBox.setPadding(paddingLeft - 1, 0, 0, paddingLeft - 1);
+        topRightBox.setPadding(paddingLeft, 0, 0, paddingLeft);
 
         try {
             let logoImage = topRightBox.addImage(await this.getAppLogo());
@@ -820,19 +819,15 @@ class Widget extends Base {
         w.addSpacer();
 
         // ---底部部件---
-        const bottomBox = w.addStack();
 
-        bottomBox.setPadding(2, 12, 8, 10); // 图片的边距
-        bottomBox.addSpacer();
+        const carImageContainer = w.addStack();
+        let canvasWidth = Math.round(width * 0.85);
+        let canvasHeight = Math.round(width * 0.4);
+        carImageContainer.setPadding(0, paddingLeft, 6, 0);
 
-        const carImageBox = bottomBox.addStack();
-        carImageBox.bottomAlignContent();
-
-        try {
-            let imageCar = await this.getVehicleImage(data);
-            let carImage = carImageBox.addImage(imageCar);
-            carImage.rightAlignImage();
-        } catch (e) {}
+        let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 'small');
+        let carStatusImage = carImageContainer.addImage(image);
+        carStatusImage.resizable = false;
         // ---底部部件完---
 
         w.url = 'de.bmw.connected.mobile20.cn://'; // BASEURL + encodeURI(SHORTCUTNAME);
@@ -887,15 +882,13 @@ class Widget extends Base {
 
         const bodyContainer = w.addStack();
         bodyContainer.layoutHorizontally();
-
         const leftContainer = bodyContainer.addStack();
 
         leftContainer.layoutVertically();
-        leftContainer.size = new Size(width * 0.85, Math.ceil(height * 0.75));
+        leftContainer.size = new Size(Math.round(width * 0.85), Math.round(height * 0.75));
         if (renderMediumContent) {
-            leftContainer.size = new Size(width * 0.55, Math.ceil(height * 0.75));
+            leftContainer.size = new Size(Math.round(width * 0.5), Math.round(height * 0.75));
         }
-
         leftContainer.addSpacer();
 
         const kmContainer = leftContainer.addStack();
@@ -978,7 +971,7 @@ class Widget extends Base {
         const locationContainer = leftContainer.addStack();
         locationContainer.setPadding(0, paddingLeft, 0, 0);
         if (renderMediumContent) {
-            locationContainer.setPadding(0, paddingLeft, 16, Math.ceil(width * 0.1));
+            locationContainer.setPadding(0, paddingLeft, 16, 0);
         }
         const locationText = locationContainer.addText(locationStr);
         locationText.font = this.getFont(`${WIDGET_FONT}`, 10);
@@ -988,29 +981,26 @@ class Widget extends Base {
 
         if (renderMediumContent) {
             const rightContainer = bodyContainer.addStack();
-            rightContainer.setPadding(8, 0, 0, 12);
+            rightContainer.setPadding(0, 0, 0, 0);
             rightContainer.layoutVertically();
-            rightContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.75));
-
-            rightContainer.addSpacer();
+            rightContainer.size = new Size(Math.round(width * 0.5), Math.round(height * 0.75));
 
             const carImageContainer = rightContainer.addStack();
-            carImageContainer.setPadding(0, 0, 10, paddingTop);
-            carImageContainer.size = new Size(Math.ceil(width * 0.45), Math.ceil(height * 0.45));
-
             carImageContainer.bottomAlignContent();
 
-            try {
-                let imageCar = await this.getVehicleImage(data);
-                let carImage = carImageContainer.addImage(imageCar);
-                carImage.rightAlignImage();
-            } catch (e) {}
+            let canvasWidth = Math.round(width * 0.45);
+            let canvasHeight = Math.round(height * 0.55);
+
+            let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 'medium');
+            let carStatusImage = carImageContainer.addImage(image);
+            carStatusImage.rightAlignImage();
+            carStatusImage.resizable = false;
 
             if (data.status && data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
                 let doorWindowStatus = data.status.doorsAndWindows[0];
 
                 let windowStatusContainer = rightContainer.addStack();
-                windowStatusContainer.setPadding(0, 0, 16, 0);
+                windowStatusContainer.setPadding(6, 0, 12, 0);
 
                 windowStatusContainer.layoutHorizontally();
                 windowStatusContainer.addSpacer();
@@ -1078,78 +1068,12 @@ class Widget extends Base {
         carImageContainer.bottomAlignContent();
 
         try {
-            let canvas = new DrawContext();
             let canvasWidth = Math.round(width * 0.9);
             let canvasHeight = Math.round(height * 0.45);
-            console.warn('canvasWidth ' + canvasWidth);
-            console.warn('canvasHeight ' + canvasHeight);
 
-            canvas.size = new Size(canvasWidth, canvasHeight);
-            canvas.opaque = false;
-            canvas.setFont(this.getFont(WIDGET_FONT_BOLD, Math.round(canvasHeight / 3.5)));
-            canvas.setTextColor(this.getFontColor());
-            canvas.respectScreenScale = true;
-
-            try {
-                let checkControlMessages = this.getControlMessages(data);
-
-                if (checkControlMessages && checkControlMessages.length == 0) {
-                    canvas.drawTextInRect(
-                        'ALL',
-                        new Rect(
-                            0, //
-                            0,
-                            Math.round(canvasWidth * 0.5),
-                            Math.round(canvasWidth * 0.5)
-                        )
-                    );
-                    canvas.drawTextInRect(
-                        'GOOD',
-                        new Rect(
-                            0,
-                            Math.round(canvasHeight / 3.5 - 5),
-                            Math.round(canvasWidth * 0.5),
-                            Math.round(canvasWidth * 0.5)
-                        )
-                    );
-                } else {
-                    let messageFontSize = Math.round(canvasHeight / 12);
-                    let messageOffset = 5;
-
-                    canvas.setFont(this.getFont(WIDGET_FONT_BOLD, messageFontSize));
-                    canvas.setTextColor(new Color('#f00', 1));
-
-                    for (const checkControlMessage of checkControlMessages) {
-                        canvas.drawTextInRect(
-                            checkControlMessage.title,
-                            new Rect(0, messageOffset, Math.round(canvasWidth * 0.5), Math.round(canvasWidth * 0.5))
-                        );
-
-                        messageOffset = messageOffset + messageFontSize;
-                    }
-                }
-            } catch (e) {
-                console.warn(e.message);
-            }
-
-            let carImage = await this.getVehicleImage(data);
-            let imageSize = this.getImageSize(carImage.size.width, carImage.size.height, canvasWidth, canvasHeight);
-
-            console.warn('rate ' + imageSize.width / imageSize.height);
-            console.warn('imageSize ' + JSON.stringify(imageSize));
-
-            canvas.drawImageInRect(
-                carImage,
-                new Rect(
-                    Math.round(canvasWidth * 0.15), //
-                    Math.round(canvasHeight * 0.25),
-                    imageSize.width,
-                    imageSize.height
-                )
-            );
-
-            let image = canvas.getImage();
+            let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight);
             let carStatusImage = carImageContainer.addImage(image);
+
             carStatusImage.resizable = false;
             carStatusImage.centerAlignImage();
             carStatusImage.url = 'de.bmw.connected.mobile20.cn://';
@@ -1186,30 +1110,103 @@ class Widget extends Base {
         return w;
     }
 
-    getImageSize(imageWidth, imageHeight, canvasWidth, canvasHeight) {
+    getImageSize(imageWidth, imageHeight, canvasWidth, canvasHeight, widgetSize = 'large') {
         let a = imageWidth;
         let b = imageHeight;
 
-        let c = Math.sqrt(Math.pow(imageWidth, 2) + Math.pow(imageHeight, 2));
-        let canvasC = Math.sqrt(Math.pow(canvasWidth, 2) + Math.pow(canvasHeight, 2));
-        let canvasK = canvasWidth / canvasHeight;
-        let k = a > b ? a / b : b / a;
+        let resizeRate = 0;
+        switch (widgetSize) {
+            case 'small':
+            case 'medium':
+                resizeRate = 0.95;
+                break;
+            case 'large':
+                resizeRate = 0.85;
+                break;
+        }
 
-        if (Math.round(c * k) > Math.round(canvasC * canvasK * 0.96)) {
-            c = c * 0.9;
-
-            if (a > b) {
-                b = Math.sqrt(Math.pow(c, 2) / (Math.pow(k, 2) + 1));
-                a = b * k;
-            } else {
-                a = Math.sqrt(Math.pow(c, 2) / (Math.pow(k, 2) + 1));
-                b = a * k;
-            }
-
+        if (a > canvasWidth || b > canvasHeight) {
+            a *= resizeRate;
+            b *= resizeRate;
             return this.getImageSize(a, b, canvasWidth, canvasHeight);
         }
 
         return {width: a, height: b};
+    }
+
+    async getCarCanvasImage(data, canvasWidth, canvasHeight, widgetSize) {
+        let canvas = new DrawContext();
+        canvas.size = new Size(canvasWidth, canvasHeight);
+        canvas.opaque = false;
+        canvas.setFont(this.getFont(WIDGET_FONT_BOLD, Math.round(canvasHeight / 3.5)));
+        canvas.setTextColor(this.getFontColor());
+        canvas.respectScreenScale = true;
+
+        try {
+            let checkControlMessages = this.getControlMessages(data);
+
+            if (checkControlMessages && checkControlMessages.length == 0) {
+                canvas.drawTextInRect(
+                    'ALL',
+                    new Rect(
+                        0, //
+                        0,
+                        Math.round(canvasWidth * 0.5),
+                        Math.round(canvasWidth * 0.5)
+                    )
+                );
+                canvas.drawTextInRect(
+                    'GOOD',
+                    new Rect(
+                        0,
+                        Math.round(canvasHeight / 4),
+                        Math.round(canvasWidth * 0.5),
+                        Math.round(canvasWidth * 0.5)
+                    )
+                );
+            } else {
+                let messageFontSize = Math.round(canvasHeight / 9);
+                let messageOffset = messageFontSize * 1.5;
+
+                canvas.setFont(this.getFont(WIDGET_FONT_BOLD, messageFontSize));
+                canvas.setTextColor(this.getFontColor());
+
+                for (const checkControlMessage of checkControlMessages) {
+                    canvas.drawTextInRect(
+                        checkControlMessage.title,
+                        new Rect(0, messageOffset, Math.round(canvasWidth * 0.5), Math.round(canvasWidth * 0.5))
+                    );
+
+                    messageOffset = messageOffset + messageFontSize;
+                }
+            }
+        } catch (e) {
+            console.warn(e.message);
+        }
+
+        let carImage = await this.getVehicleImage(data);
+        let imageSize = this.getImageSize(
+            carImage.size.width,
+            carImage.size.height,
+            canvasWidth,
+            canvasHeight,
+            widgetSize
+        );
+
+        console.warn('rate ' + imageSize.width / imageSize.height);
+        console.warn('imageSize ' + JSON.stringify(imageSize));
+
+        canvas.drawImageInRect(
+            carImage,
+            new Rect(
+                canvasWidth - imageSize.width, //
+                canvasHeight - imageSize.height,
+                imageSize.width,
+                imageSize.height
+            )
+        );
+
+        return canvas.getImage();
     }
 
     async loadMapView(latLng, width, height, useCache = true) {
@@ -1637,7 +1634,7 @@ class Widget extends Base {
     async getVehicleImage(data) {
         let imageCar = '';
 
-        if (this.userConfigData.custom_vehicle_image) {
+        if (false) {
             try {
                 imageCar = await this.getImageByUrl(this.userConfigData.custom_vehicle_image);
             } catch (e) {
