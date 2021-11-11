@@ -7,6 +7,9 @@
 
 More languages: [English](README.en-us.md).
 
+## 程序主页
+[![程序主页](/Publish/images/logo.svg)](https://bmw-linker.com)
+
 ## 小组件效果
 !["效果图"](/screenshots/sc_1.png?raw=true)
 
@@ -39,3 +42,6 @@ DEV_SERVER=192.168.1.123
 
 ### License
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+### 资助开发
+[![License: MIT](https://img.shields.io/static/v1?label=%E8%B5%84%E5%8A%A9%E5%BC%80%E5%8F%91&message=%E5%BE%AE%E4%BF%A1%E8%B5%9E%E8%B5%8F&color=success)](./Publish/images/payment.jpg)

@@ -6,7 +6,8 @@ This project is a pure Node JS widget which can be used on [Scriptable](https://
 The main purpose of this project is the load vehicle related information from, then display them into the desktop of iOS ( > 13) devices.
 
 其他语言版本: [中文](README.md).
-
+## Home Page
+[![Home Page](/Publish/images/logo.svg)](https://bmw-linker.com)
 ## Screenshots
 !["Screenshot"](/screenshots/sc_1.png?raw=true)
 
@@ -36,3 +37,6 @@ Thanks many other bimmwer owners give us feedback suggestions and help with test
 
 ### License
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+
+### DONATE
+[![License: MIT](https://img.shields.io/static/v1?label=DONATE&message=WECHAT&color=success)](./Publish/images/payment.jpg)
