@@ -743,8 +743,8 @@ const Running = async (Widget, default_args = "") => {
 
 
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.9';
-let WIDGET_BUILD = '21111101';
+let WIDGET_VERSION = 'v2.0.10';
+let WIDGET_BUILD = '21111102';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -824,7 +824,8 @@ class Widget extends Base {
         custom_vehicle_image: null,
         custom_logo_image: null,
         vin: '',
-        map_api_key: null
+        map_api_key: null,
+        show_control_checks: 0
     };
 
     appColorData = {
@@ -860,7 +861,7 @@ class Widget extends Base {
 
         if (config.runsInApp) {
             this.registerAction('退出登录', this.userCleanAlert);
-            this.registerAction('关于', this.aboutAction);
+            this.registerAction('关于小组件', this.aboutAction);
             this.registerAction('检查更新', this.checkUpdatePress);
             this.registerAction('配置小组件', this.setWidgetConfig);
         }
@@ -941,7 +942,7 @@ class Widget extends Base {
     }
 
     async aboutAction() {
-        Safari.open(APP_HOST_SERVER);
+        Safari.open(APP_HOST_SERVER + '/about.html');
     }
 
     async userLoginCredentials() {
@@ -982,6 +983,7 @@ class Widget extends Base {
         this.saveSettings(false);
 
         await this.userConfigInput();
+        await this.controlCheckSetup();
     }
 
     formatUserMobile(mobileStr) {
@@ -1284,6 +1286,26 @@ class Widget extends Base {
         this.saveSettings();
     }
 
+    async controlCheckSetup() {
+        const controlCheckAlert = new Alert();
+
+        controlCheckAlert.title = '是否显示车辆检查';
+        controlCheckAlert.message = '是否显示额外的车辆检查信息？\n\r\n如机油保养、轮胎压力检查或者ALL GOOD。';
+
+        controlCheckAlert.addAction('不显示');
+        // last index alway be the custom
+        controlCheckAlert.addAction('显示所有检查信息');
+        controlCheckAlert.addAction('只显示ALL GOOD');
+
+        const userSelection = await controlCheckAlert.presentAlert();
+
+        this.userConfigData['show_control_checks'] = Number(userSelection);
+        this.settings['UserConfig'] = this.userConfigData;
+
+        // write to local
+        this.saveSettings(false);
+    }
+
     async colorConfigInput() {
         const bgColorAlert = new Alert();
 
@@ -1473,8 +1495,20 @@ class Widget extends Base {
         topRightBox.setPadding(paddingLeft, 0, 0, paddingLeft);
 
         try {
-            let logoImage = topRightBox.addImage(await this.getAppLogo());
-            logoImage.rightAlignImage();
+            let logoImage = await this.getAppLogo();
+            let logoImageWidget = topRightBox.addImage(logoImage);
+
+            let logoContainerWidth = Math.round(width * 0.1);
+            console.warn('size: ' + logoContainerWidth);
+            let imageSize = this.getImageSize(
+                logoImage.size.width,
+                logoImage.size.height,
+                logoContainerWidth,
+                logoContainerWidth,
+                0.99
+            );
+
+            logoImageWidget.imageSize = new Size(imageSize.width, imageSize.width);
         } catch (e) {}
         // ---顶部右边部件完---
 
@@ -1553,11 +1587,13 @@ class Widget extends Base {
         const carImageContainer = w.addStack();
         let canvasWidth = Math.round(width * 0.85);
         let canvasHeight = Math.round(width * 0.4);
-        carImageContainer.setPadding(0, paddingLeft, 6, 0);
 
-        let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 'small');
+        let _paddingRight = !this.userConfigData.show_control_checks ? paddingLeft : 0;
+        carImageContainer.setPadding(0, paddingLeft, 6, _paddingRight);
+
+        let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 0.95);
         let carStatusImage = carImageContainer.addImage(image);
-        carStatusImage.resizable = false;
+        carStatusImage.resizable = !this.userConfigData.show_control_checks;
         // ---底部部件完---
 
         w.url = 'de.bmw.connected.mobile20.cn://'; // BASEURL + encodeURI(SHORTCUTNAME);
@@ -1717,14 +1753,16 @@ class Widget extends Base {
 
             const carImageContainer = rightContainer.addStack();
             carImageContainer.bottomAlignContent();
+            if (!this.userConfigData.show_control_checks) {
+                carImageContainer.setPadding(0, 0, 0, 10);
+            }
 
             let canvasWidth = Math.round(width * 0.45);
             let canvasHeight = Math.round(height * 0.55);
 
-            let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 'medium');
+            let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 0.95);
             let carStatusImage = carImageContainer.addImage(image);
-            carStatusImage.rightAlignImage();
-            carStatusImage.resizable = false;
+            carStatusImage.resizable = !this.userConfigData.show_control_checks;
 
             if (data.status && data.status.doorsAndWindows && data.status.doorsAndWindows.length > 0) {
                 let doorWindowStatus = data.status.doorsAndWindows[0];
@@ -1801,10 +1839,10 @@ class Widget extends Base {
             let canvasWidth = Math.round(width * 0.9);
             let canvasHeight = Math.round(height * 0.45);
 
-            let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight);
+            let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 0.85);
             let carStatusImage = carImageContainer.addImage(image);
 
-            carStatusImage.resizable = false;
+            carStatusImage.resizable = !this.userConfigData.show_control_checks;
             carStatusImage.centerAlignImage();
             carStatusImage.url = 'de.bmw.connected.mobile20.cn://';
         } catch (e) {
@@ -1840,22 +1878,14 @@ class Widget extends Base {
         return w;
     }
 
-    getImageSize(imageWidth, imageHeight, canvasWidth, canvasHeight, widgetSize = 'large') {
+    getImageSize(imageWidth, imageHeight, canvasWidth, canvasHeight, resizeRate = 0.85) {
         let a = imageWidth;
         let b = imageHeight;
 
-        let resizeRate = 0;
-        switch (widgetSize) {
-            case 'small':
-            case 'medium':
-                resizeRate = 0.95;
-                break;
-            case 'large':
-                resizeRate = 0.85;
-                break;
-        }
-
         if (a > canvasWidth || b > canvasHeight) {
+            if (resizeRate >= 1) {
+                resizeRate = 0.99;
+            }
             a *= resizeRate;
             b *= resizeRate;
             return this.getImageSize(a, b, canvasWidth, canvasHeight);
@@ -1864,7 +1894,17 @@ class Widget extends Base {
         return {width: a, height: b};
     }
 
-    async getCarCanvasImage(data, canvasWidth, canvasHeight, widgetSize) {
+    async getCarCanvasImage(data, canvasWidth, canvasHeight, resizeRate) {
+        if (!this.userConfigData.show_control_checks) {
+            try {
+                let carImage = await this.getVehicleImage(data);
+
+                return carImage;
+            } catch (e) {
+                console.warn(e);
+            }
+        }
+
         let canvas = new DrawContext();
         canvas.size = new Size(canvasWidth, canvasHeight);
         canvas.opaque = false;
@@ -1901,12 +1941,7 @@ class Widget extends Base {
                 let exclamation = SFSymbol.named('exclamationmark.circle').image;
                 canvas.drawImageInRect(
                     exclamation,
-                    new Rect(
-                        0,
-                        messageOffset,
-                        Math.round(messageFontSize * 1.2),
-                        Math.round(messageFontSize * 1.2)
-                    )
+                    new Rect(0, messageOffset, Math.round(messageFontSize * 1.2), Math.round(messageFontSize * 1.2))
                 );
 
                 canvas.setFont(this.getFont(WIDGET_FONT, messageFontSize));
@@ -1936,7 +1971,7 @@ class Widget extends Base {
             carImage.size.height,
             canvasWidth,
             canvasHeight,
-            widgetSize
+            resizeRate
         );
 
         console.warn('rate ' + imageSize.width / imageSize.height);
@@ -2005,6 +2040,10 @@ class Widget extends Base {
 
     getControlMessages(data) {
         try {
+            if (this.userConfigData.show_control_checks == 2) {
+                return [];
+            }
+
             let checkControlMessages = data.status.checkControlMessages.filter((checkControlMessage) => {
                 return checkControlMessage['criticalness'] != 'nonCritical';
             });
