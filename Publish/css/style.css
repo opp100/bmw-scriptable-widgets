@@ -339,7 +339,7 @@ button:focus,
 .btn-main {
   padding: 25px 45px;
   border-radius: 3px;
-  background: #1b69d4;
+  background: #3fa9ec;
   color: #fff;
   outline: none;
 }
@@ -356,7 +356,7 @@ button:focus,
 .btn-main-md {
   padding: 17px 38px;
   border-radius: 3px;
-  background: #1b69d4;
+  background: #3fa9ec;
   color: #fff;
   outline: none;
 }
@@ -2203,6 +2203,11 @@ hr {
   .google-map #map_canvas {
     height: 350px;
   }
+}
+
+.logo {
+    height: .8em;
+    width: auto;
 }
 
 /*# sourceMappingURL=style.css.map */
