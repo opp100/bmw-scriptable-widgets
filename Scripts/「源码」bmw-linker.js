@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.10';
-let WIDGET_BUILD = '21111102';
+let WIDGET_VERSION = 'v2.0.11';
+let WIDGET_BUILD = '21111103';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -525,6 +525,18 @@ class Widget extends Base {
                     endColor: '#540101',
                     fontColor: '#fff'
                 }
+            },
+            橙色: {
+                light: {
+                    startColor: '#ffc699',
+                    endColor: '#fff',
+                    fontColor: '#1d1d1d'
+                },
+                dark: {
+                    startColor: '#cf6b21',
+                    endColor: '#85450d',
+                    fontColor: '#fff'
+                }
             }
         };
 
@@ -747,7 +759,7 @@ class Widget extends Base {
         const vehicleNameText = vehicleNameContainer.addText(vehicleNameStr);
 
         // get dynamic size
-        let vehicleNameSize = 20;
+        let vehicleNameSize = Math.round(width * 0.12);
 
         if (vehicleNameStr.length >= 10) {
             vehicleNameSize = vehicleNameSize - Math.round(vehicleNameStr.length / 4);
@@ -762,18 +774,21 @@ class Widget extends Base {
 
         // ---顶部右边部件---
         const topRightBox = topBox.addStack();
-        topRightBox.setPadding(paddingLeft, 0, 0, paddingLeft);
+        topRightBox.setPadding(6, 0, 0, paddingLeft);
+
+        if (!this.userConfigData.custom_logo_image) {
+            topRightBox.setPadding(paddingLeft, 0, 0, paddingLeft);
+        }
 
         try {
             let logoImage = await this.getAppLogo();
             let logoImageWidget = topRightBox.addImage(logoImage);
 
             let logoContainerWidth = Math.round(width * 0.1);
-            console.warn('size: ' + logoContainerWidth);
             let imageSize = this.getImageSize(
                 logoImage.size.width,
                 logoImage.size.height,
-                logoContainerWidth,
+                Math.round(logoContainerWidth * 2.5),
                 logoContainerWidth,
                 0.99
             );
@@ -858,8 +873,12 @@ class Widget extends Base {
         let canvasWidth = Math.round(width * 0.85);
         let canvasHeight = Math.round(width * 0.4);
 
-        let _paddingRight = !this.userConfigData.show_control_checks ? paddingLeft : 0;
-        carImageContainer.setPadding(0, paddingLeft, 6, _paddingRight);
+        carImageContainer.setPadding(0, paddingLeft, 6, 0);
+        if (!this.userConfigData.show_control_checks) {
+            carImageContainer.layoutHorizontally();
+            carImageContainer.addSpacer();
+            carImageContainer.setPadding(6, paddingLeft, 6, paddingLeft);
+        }
 
         let image = await this.getCarCanvasImage(data, canvasWidth, canvasHeight, 0.95);
         let carStatusImage = carImageContainer.addImage(image);
@@ -1024,7 +1043,7 @@ class Widget extends Base {
             const carImageContainer = rightContainer.addStack();
             carImageContainer.bottomAlignContent();
             if (!this.userConfigData.show_control_checks) {
-                carImageContainer.setPadding(0, 0, 0, 10);
+                carImageContainer.setPadding(0, 6, 0, paddingLeft);
             }
 
             let canvasWidth = Math.round(width * 0.45);
@@ -1103,6 +1122,12 @@ class Widget extends Base {
         const carImageContainer = largeExtraContainer.addStack();
         carImageContainer.setPadding(0, paddingLeft, 0, paddingLeft);
 
+        if (!this.userConfigData.show_control_checks) {
+            carImageContainer.layoutHorizontally();
+            carImageContainer.addSpacer();
+            carImageContainer.setPadding(paddingLeft, 0, paddingLeft, 0);
+        }
+
         carImageContainer.bottomAlignContent();
 
         try {
@@ -1114,6 +1139,9 @@ class Widget extends Base {
 
             carStatusImage.resizable = !this.userConfigData.show_control_checks;
             carStatusImage.centerAlignImage();
+            if (!this.userConfigData.show_control_checks) {
+                carImageContainer.addSpacer();
+            }
             carStatusImage.url = 'de.bmw.connected.mobile20.cn://';
         } catch (e) {
             console.log(e.message);
