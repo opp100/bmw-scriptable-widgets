@@ -743,8 +743,8 @@ const Running = async (Widget, default_args = "") => {
 
 
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.8';
-let WIDGET_BUILD = '21111003';
+let WIDGET_VERSION = 'v2.0.9';
+let WIDGET_BUILD = '21111101';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -1896,15 +1896,31 @@ class Widget extends Base {
                 );
             } else {
                 let messageFontSize = Math.round(canvasHeight / 9);
-                let messageOffset = messageFontSize * 1.5;
+                let messageOffset = Math.round(messageFontSize * 1.5);
 
-                canvas.setFont(this.getFont(WIDGET_FONT_BOLD, messageFontSize));
+                let exclamation = SFSymbol.named('exclamationmark.circle').image;
+                canvas.drawImageInRect(
+                    exclamation,
+                    new Rect(
+                        0,
+                        messageOffset,
+                        Math.round(messageFontSize * 1.2),
+                        Math.round(messageFontSize * 1.2)
+                    )
+                );
+
+                canvas.setFont(this.getFont(WIDGET_FONT, messageFontSize));
                 canvas.setTextColor(this.getFontColor());
 
                 for (const checkControlMessage of checkControlMessages) {
                     canvas.drawTextInRect(
                         checkControlMessage.title,
-                        new Rect(0, messageOffset, Math.round(canvasWidth * 0.5), Math.round(canvasWidth * 0.5))
+                        new Rect(
+                            Math.round(messageFontSize * 1.5),
+                            messageOffset,
+                            Math.round(canvasWidth * 0.5),
+                            Math.round(canvasWidth * 0.5)
+                        )
                     );
 
                     messageOffset = messageOffset + messageFontSize;
@@ -2364,7 +2380,7 @@ class Widget extends Base {
     async getVehicleImage(data) {
         let imageCar = '';
 
-        if (false) {
+        if (this.userConfigData.custom_vehicle_image) {
             try {
                 imageCar = await this.getImageByUrl(this.userConfigData.custom_vehicle_image);
             } catch (e) {
