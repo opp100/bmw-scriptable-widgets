@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.0.11';
-let WIDGET_BUILD = '21111103';
+let WIDGET_VERSION = 'v2.1.0';
+let WIDGET_BUILD = '21111501';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -634,23 +634,52 @@ class Widget extends Base {
         await this.getDependencies();
 
         await this.renderError('载入中...');
-        if (this.userConfigData.username == '') {
-            console.error('尚未配置用户');
+
+        if (
+            (!this.userConfigData.username || this.userConfigData.username == '') &&
+            (!this.userConfigData.custom_name || this.userConfigData.custom_name == '')
+        ) {
             return await this.renderError('请先配置用户');
         }
-        let screenSize = Device.screenSize();
+
         try {
             this.checkUpdate(true);
         } catch (e) {}
 
         let data = await this.getData();
 
-        if (data == null) {
+        if (
+            !data &&
+            (!this.userConfigData.username || this.userConfigData.username == '') &&
+            this.userConfigData.custom_name &&
+            this.userConfigData.custom_name != ''
+        ) {
+            // put default data
+            data = {
+                status: {
+                    doorsGeneralState: '已上锁',
+                    lastUpdatedAt: new Date(),
+                    fuelIndicators: [
+                        {
+                            rangeValue: '888',
+                            levelValue: '99',
+                            rangeUnits: 'km',
+                            levelUnits: '%'
+                        }
+                    ],
+                    currentMileage: {mileage: 2233, units: 'km'},
+                }
+            };
+        }
+
+        if (!data) {
             return await this.renderError('获取车辆信息失败，请检查授权');
         }
 
         // start to render if we get information
         try {
+            let screenSize = Device.screenSize();
+
             data.size = this.DeviceSize[`${screenSize.width}x${screenSize.height}`] || this.DeviceSize['375x812'];
         } catch (e) {
             console.warn('Display Error: ' + e.message);
