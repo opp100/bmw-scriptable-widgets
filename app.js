@@ -149,7 +149,6 @@ app.post('/console', (req, res) => {
 
 // 获取当前电脑IP
 function getIPAdress() {
-    return '192.168.50.7'
     var interfaces = os.networkInterfaces();
     for (var devName in interfaces) {
         var iface = interfaces[devName];

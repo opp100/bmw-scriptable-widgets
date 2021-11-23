@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.1.0';
-let WIDGET_BUILD = '21111501';
+let WIDGET_VERSION = 'v2.1.1';
+let WIDGET_BUILD = '21112301';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -114,8 +114,8 @@ class Widget extends Base {
 
     constructor(arg) {
         super(arg);
-        this.name = 'My BMW';
-        this.desc = '宝马互联App小组件';
+        this.name = 'BMW-Linker';
+        this.desc = '宝马My BMW互联App小组件';
 
         // load settings
         this.userConfigData = {...this.userConfigData, ...this.settings['UserConfig']};
@@ -143,7 +143,7 @@ class Widget extends Base {
         const confirmationAlert = new Alert();
 
         confirmationAlert.title = '郑重声明';
-        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源免费的，由BMW车主开发，所有责任与BMW公司无关\n\r\n作者: Yocky, UI: Popo`;
+        confirmationAlert.message = `小组件需要使用到您的BMW账号\n\r\n首次登录请配置账号、密码进行令牌获取\n\r\n小组件不会收集您的个人账户信息，所有账号信息将存在iCloud或者iPhone上但也请您妥善保管自己的账号\n\r\n小组件是开源、并且完全免费的，由BMW车主开发，所有责任与BMW公司无关\n\r\n开发者: Yocky Xiang， UI设计: Popo`;
 
         confirmationAlert.addAction('同意');
         confirmationAlert.addCancelAction('不同意');
@@ -192,6 +192,11 @@ class Widget extends Base {
             console.error('Clean User: ' + e.message);
         }
 
+        let vin = this.userConfigData.vin || '';
+
+        let lastUpdateKey = vin + MY_BMW_VEHICLE_UPDATE_LAST_AT;
+        let localVehicleDataKey = vin + MY_BMW_VEHICLE_DATA;
+
         let keyStoreArray = [
             MY_BMW_LAST_CHECK_IN_AT,
             MY_BMW_REFRESH_TOKEN,
@@ -199,7 +204,9 @@ class Widget extends Base {
             MY_BMW_TOKEN_UPDATE_LAST_AT,
             MY_BMW_VEHICLE_UPDATE_LAST_AT,
             APP_USE_AGREEMENT,
-            WIDGET_UPDATED_AT
+            WIDGET_UPDATED_AT,
+            lastUpdateKey,
+            localVehicleDataKey
         ];
         for (const key of keyStoreArray) {
             try {
@@ -277,8 +284,8 @@ class Widget extends Base {
             let updateAT = null;
             if (automated && Keychain.contains(WIDGET_UPDATED_AT)) {
                 updateAT = parseInt(Keychain.get(WIDGET_UPDATED_AT));
-                if (updateAT && updateAT > new Date().valueOf() - 1000 * 60 * 60) {
-                    return console.warn('update checked within 1 hour');
+                if (updateAT && updateAT > new Date().valueOf() - 1000 * 60 * 60 * 4) {
+                    return console.warn('update checked within last 4 hour');
                 }
             }
 
@@ -442,8 +449,8 @@ class Widget extends Base {
                 continue;
             }
 
-            if (key == 'force_dark_theme' && this.userConfigData[key]) {
-                userCustomConfigAlert.addTextField(configSet[key], '是');
+            if (key == 'force_dark_theme') {
+                userCustomConfigAlert.addTextField(configSet[key], this.userConfigData[key] ? '是' : null);
                 continue;
             }
 
@@ -667,7 +674,7 @@ class Widget extends Base {
                             levelUnits: '%'
                         }
                     ],
-                    currentMileage: {mileage: 2233, units: 'km'},
+                    currentMileage: {mileage: 2233, units: 'km'}
                 }
             };
         }
@@ -1427,20 +1434,44 @@ class Widget extends Base {
             chargingType: null
         };
         try {
-            for (const fuelIndicator of fuelIndicators) {
+            if (fuelIndicators.length == 1) {
                 for (const key in _fuelObj) {
-                    if (fuelIndicator[key] && !_fuelObj[key]) {
-                        _fuelObj[key] = fuelIndicator[key];
+                    if (fuelIndicators[0][key] && !_fuelObj[key]) {
+                        _fuelObj[key] = fuelIndicators[0][key];
                     }
                 }
-            }
+            } else {
+                for (const fuelIndicator of fuelIndicators) {
+                    if (!_fuelObj['rangeValue']) {
+                        _fuelObj['rangeValue'] = Number(fuelIndicator['rangeValue']);
+                        _fuelObj['rangeUnits'] = fuelIndicator['rangeUnits'];
+                    }
 
-            for (const key in _fuelObj) {
-                if (!_fuelObj[key]) {
-                    _fuelObj[key] = '';
+                    if (Number(fuelIndicator['rangeValue']) >= _fuelObj['rangeValue']) {
+                        _fuelObj['rangeValue'] = Number(fuelIndicator['rangeValue']);
+                        _fuelObj['rangeUnits'] = fuelIndicator['rangeUnits'];
+                    }
                 }
+
+                // if it is hyper vehicle, we are using range value as unit. eg 300km / 200km | 100km
+                let unitText = '';
+                for (const fuelIndicator of fuelIndicators) {
+                    if (_fuelObj['rangeValue'] > fuelIndicator['rangeValue']) {
+                        if (unitText != '') {
+                            unitText += ' ';
+                        }
+                        unitText += `${fuelIndicator['rangeValue']}`;
+                    }
+                }
+                _fuelObj['levelValue'] = unitText;
             }
         } catch (e) {}
+
+        for (const key in _fuelObj) {
+            if (!_fuelObj[key]) {
+                _fuelObj[key] = '';
+            }
+        }
 
         return _fuelObj;
     }
@@ -1632,24 +1663,27 @@ class Widget extends Base {
         let lastUpdateKey = vin + MY_BMW_VEHICLE_UPDATE_LAST_AT;
         let localVehicleDataKey = vin + MY_BMW_VEHICLE_DATA;
 
+        let cacheData = this.loadVehicleFromCache(vin);
+
         // skip update prevent access to bmw too much
-        try {
-            if (!forceRefresh && Keychain.contains(lastUpdateKey) && Keychain.contains(localVehicleDataKey)) {
+        if (!forceRefresh && cacheData) {
+            if (Keychain.contains(lastUpdateKey)) {
                 let lastUpdate = parseInt(Keychain.get(lastUpdateKey));
 
-                let cachedVehicleData = JSON.parse(Keychain.get(localVehicleDataKey));
-
-                // load data every 5 mins
-                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 5 && cachedVehicleData && cachedVehicleData.vin) {
-                    return cachedVehicleData;
+                // if last check within 5 mins we return cache
+                if (lastUpdate > new Date().valueOf() - 1000 * 60 * 5) {
+                    console.log('Get vehicle data from cache');
+                    // return cacheData;
                 }
             }
-        } catch (e) {
-            console.warn('Load vehicle from cache failed');
         }
+
+        let vehicleData = null;
+
         try {
             console.log('Start to get vehicle details online');
             let req = new Request(BMW_SERVER_HOST + `/eadrax-vcs/v1/vehicles?appDateTime=${new Date().valueOf()}`);
+            // let req = new Request(`http://192.168.50.7:5566/Publish/example.json?appDateTime=${new Date().valueOf()}`);
 
             req.headers = {
                 ...BMW_HEADERS,
@@ -1660,8 +1694,6 @@ class Widget extends Base {
             const vehicles = await req.loadJSON();
 
             if (vehicles && Array.isArray(vehicles) && vehicles.length > 0) {
-                let vehicleData = null;
-
                 console.log('Get vehicle details success');
                 if (vin && vin.length > 0) {
                     // if more than one vehicle
@@ -1678,26 +1710,27 @@ class Widget extends Base {
 
                 vehicleData = vehicleData || vehicles[0];
 
-                Keychain.set(lastUpdateKey, String(new Date().valueOf()));
-                Keychain.set(localVehicleDataKey, JSON.stringify(vehicleData));
+                if (vehicleData) {
+                    Keychain.set(lastUpdateKey, String(new Date().valueOf()));
+                    Keychain.set(localVehicleDataKey, JSON.stringify(vehicleData));
 
-                if (config.runsInApp) {
-                    const confirmationAlert = new Alert();
+                    if (config.runsInApp) {
+                        const confirmationAlert = new Alert();
 
-                    confirmationAlert.title = '成功';
-                    confirmationAlert.message = '车辆信息获取成功，请在桌面配置小组件。更多小组件设置请点击 开始配置';
+                        confirmationAlert.title = '成功';
+                        confirmationAlert.message =
+                            '车辆信息获取成功，请在桌面配置小组件。更多小组件设置请点击 开始配置';
 
-                    confirmationAlert.addCancelAction('跳过');
-                    confirmationAlert.addAction('开始配置');
+                        confirmationAlert.addCancelAction('跳过');
+                        confirmationAlert.addAction('开始配置');
 
-                    let userSelection = await confirmationAlert.presentAlert();
+                        let userSelection = await confirmationAlert.presentAlert();
 
-                    if (userSelection != -1) {
-                        await this.userConfigInput();
+                        if (userSelection != -1) {
+                            await this.userConfigInput();
+                        }
                     }
                 }
-
-                return vehicleData;
             }
         } catch (e) {
             if (config.runsInApp) {
@@ -1712,7 +1745,26 @@ class Widget extends Base {
             }
         }
 
-        console.error('Load vehicle failed');
+        // if vehicle data is not found we use cache
+        return vehicleData && vehicleData.vin ? vehicleData : cacheData;
+    }
+
+    async loadVehicleFromCache(vin) {
+        let localVehicleDataKey = vin + MY_BMW_VEHICLE_DATA;
+
+        try {
+            if (Keychain.contains(localVehicleDataKey)) {
+                let cachedVehicleData = JSON.parse(Keychain.get(localVehicleDataKey));
+
+                // load data every 5 mins
+                if (cachedVehicleData && cachedVehicleData.vin) {
+                    return cachedVehicleData;
+                }
+            }
+        } catch (e) {
+            console.warn('Load vehicle from cache failed');
+        }
+
         return null;
     }
 
