@@ -743,8 +743,8 @@ const Running = async (Widget, default_args = "") => {
 
 
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.1.4';
-let WIDGET_BUILD = '21121801';
+let WIDGET_VERSION = 'v2.1.5';
+let WIDGET_BUILD = '21122102';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -1996,57 +1996,76 @@ class Widget extends Base {
         canvas.setTextColor(this.getFontColor());
         canvas.respectScreenScale = true;
 
-        try {
-            let checkControlMessages = this.getControlMessages(data);
+        let festivalBG = await this.getFestivalBackground();
 
-            if (checkControlMessages && checkControlMessages.length == 0) {
-                canvas.drawTextInRect(
-                    'ALL',
-                    new Rect(
-                        0, //
-                        0,
-                        Math.round(canvasWidth * 0.5),
-                        Math.round(canvasWidth * 0.5)
-                    )
-                );
-                canvas.drawTextInRect(
-                    'GOOD',
-                    new Rect(
-                        0,
-                        Math.round(canvasHeight / 4),
-                        Math.round(canvasWidth * 0.5),
-                        Math.round(canvasWidth * 0.5)
-                    )
-                );
-            } else {
-                let messageFontSize = Math.round(canvasHeight / 9);
-                let messageOffset = Math.round(messageFontSize * 1.5);
+        if (festivalBG) {
+            let rate =
+                festivalBG.size.width > festivalBG.size.height
+                    ? festivalBG.size.height / festivalBG.size.width
+                    : festivalBG.size.width / festivalBG.size.height;
 
-                let exclamation = SFSymbol.named('exclamationmark.circle').image;
-                canvas.drawImageInRect(
-                    exclamation,
-                    new Rect(0, messageOffset, Math.round(messageFontSize * 1.2), Math.round(messageFontSize * 1.2))
-                );
+            canvas.drawImageInRect(
+                festivalBG,
+                new Rect(
+                    0, //
+                    Math.round(canvasHeight * 0.04),
+                    Math.round(canvasHeight * 0.9) * rate,
+                    Math.round(canvasHeight * 0.9)
+                )
+            );
+        } else {
+            try {
+                let checkControlMessages = this.getControlMessages(data);
 
-                canvas.setFont(this.getFont(WIDGET_FONT, messageFontSize));
-                canvas.setTextColor(this.getFontColor());
-
-                for (const checkControlMessage of checkControlMessages) {
+                if (checkControlMessages && checkControlMessages.length == 0) {
                     canvas.drawTextInRect(
-                        checkControlMessage.title,
+                        'ALL',
                         new Rect(
-                            Math.round(messageFontSize * 1.5),
-                            messageOffset,
+                            0, //
+                            0,
                             Math.round(canvasWidth * 0.5),
                             Math.round(canvasWidth * 0.5)
                         )
                     );
+                    canvas.drawTextInRect(
+                        'GOOD',
+                        new Rect(
+                            0,
+                            Math.round(canvasHeight / 4),
+                            Math.round(canvasWidth * 0.5),
+                            Math.round(canvasWidth * 0.5)
+                        )
+                    );
+                } else {
+                    let messageFontSize = Math.round(canvasHeight / 9);
+                    let messageOffset = Math.round(messageFontSize * 1.5);
 
-                    messageOffset = messageOffset + messageFontSize;
+                    let exclamation = SFSymbol.named('exclamationmark.circle').image;
+                    canvas.drawImageInRect(
+                        exclamation,
+                        new Rect(0, messageOffset, Math.round(messageFontSize * 1.2), Math.round(messageFontSize * 1.2))
+                    );
+
+                    canvas.setFont(this.getFont(WIDGET_FONT, messageFontSize));
+                    canvas.setTextColor(this.getFontColor());
+
+                    for (const checkControlMessage of checkControlMessages) {
+                        canvas.drawTextInRect(
+                            checkControlMessage.title,
+                            new Rect(
+                                Math.round(messageFontSize * 1.5),
+                                messageOffset,
+                                Math.round(canvasWidth * 0.5),
+                                Math.round(canvasWidth * 0.5)
+                            )
+                        );
+
+                        messageOffset = messageOffset + messageFontSize;
+                    }
                 }
+            } catch (e) {
+                console.warn(e.message);
             }
-        } catch (e) {
-            console.warn(e.message);
         }
 
         let carImage = await this.getVehicleImage(data);
@@ -2072,6 +2091,46 @@ class Widget extends Base {
         );
 
         return canvas.getImage();
+    }
+
+    async getFestivalBackground() {
+        let url = null;
+        let now = new Date();
+        let currentMonth = now.getMonth() + 1;
+        let currentDate = now.getDate();
+
+        if (currentMonth == 12) {
+            if (currentDate >= 21 && currentDate <= 30) {
+                url = 'https://s4.ax1x.com/2021/12/21/TMxdZF.png'; // Xmas
+            }
+            if (currentDate >= 31) {
+                url = 'https://s4.ax1x.com/2021/12/21/TQFDvd.png'; // new year
+            }
+        }
+
+        if (currentMonth == 1) {
+            if (currentDate >= 1 && currentDate <= 3) {
+                url = 'https://s4.ax1x.com/2021/12/21/TQFDvd.png'; // new year
+            }
+            if (currentDate >= 27 && currentDate <= 31) {
+                url = 'https://s4.ax1x.com/2021/12/21/TQP2Lt.png';
+            }
+        }
+
+        if (currentMonth == 2) {
+            if (currentDate >= 1 && currentDate <= 7) {
+                url = 'https://s4.ax1x.com/2021/12/21/TQP2Lt.png';
+            }
+        }
+
+        try {
+            if (!url) {
+                return null;
+            }
+            return await this.getImageByUrl(url);
+        } catch (e) {
+            return null;
+        }
     }
 
     getFocusedBackgroundColor() {
