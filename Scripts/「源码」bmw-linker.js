@@ -686,9 +686,9 @@ class Widget extends Base {
 
         // start to render if we get information
         try {
-            let screenSize = Device.screenSize();
-
-            data.size = this.DeviceSize[`${screenSize.width}x${screenSize.height}`] || this.DeviceSize['375x812'];
+            let screenSize = Device.screenResolution();
+            let scale = Device.screenScale();
+            data.size = this.DeviceSize[`${screenSize.width/scale}x${screenSize.height/scale}`] || this.DeviceSize['375x812'];
         } catch (e) {
             console.warn('Display Error: ' + e.message);
             await this.renderError('显示错误：' + e.message);
@@ -1168,8 +1168,10 @@ class Widget extends Base {
                     data.properties.vehicleLocation.coordinates.latitude;
             } catch (e) {}
 
-            let mapImage = await this.loadMapView(latLng, mapWidth, mapHeight);
-            largeExtraContainer.addImage(mapImage);
+            let mapImage = await this.loadMapView(latLng, mapWidth, mapHeight, true);
+            let widget = largeExtraContainer.addImage(mapImage);
+            widget.centerAlignImage();
+            widget.imageSize = new Size(mapWidth, mapHeight);
             largeExtraContainer.url = this.buildMapURL(data);
 
             return w;
@@ -1429,7 +1431,9 @@ class Widget extends Base {
 
             if (useCache && FileManager.local().fileExists(cacheFile)) {
                 console.log('load map from cache');
-                return Image.fromFile(cacheFile);
+                let data = Data.fromFile(cacheFile);
+                let img = Image.fromData(data);
+                return img;
             }
 
             console.log('load map from API');
@@ -1438,11 +1442,21 @@ class Widget extends Base {
 
             req.method = 'GET';
 
-            const img = await req.loadImage();
+            //const img = await req.loadImage();
+            const res = await req.load();
+
+            try {
+                let fileManager = FileManager.local();
+                fileManager.write(cacheFile, res);
+                console.warn(cacheFile + ' downloaded');
+            } catch (e) {
+                console.error(e.message);
+            }
 
             // 存储到缓存
-            FileManager.local().writeImage(cacheFile, img);
-
+            //FileManager.local().writeImage(cacheFile, img);
+            let data = Data.fromFile(cacheFile);
+            let img = Image.fromData(data);
             return img;
         } catch (e) {
             console.log('load map failed');
