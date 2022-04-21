@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.1.5';
-let WIDGET_BUILD = '21122102';
+let WIDGET_VERSION = 'v2.1.6';
+let WIDGET_BUILD = '22042101';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -36,7 +36,7 @@ let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICaqu6.png';
 // header is might be used for preventing the bmw block the external api?
 let BMW_HEADERS = {
     'user-agent': 'Dart/2.10 (dart:io)',
-    'x-user-agent': 'ios(15.0.2);bmw;1.6.6(10038)'
+    'x-user-agent': 'ios(15.4.1);bmw;2.3.0(13603)'
 };
 
 // setup local storage keys
@@ -49,6 +49,8 @@ let MY_BMW_VEHICLE_UPDATE_LAST_AT = 'MY_BMW_VEHICLE_UPDATE_LAST_AT';
 let MY_BMW_VEHICLE_DATA = 'MY_BMW_VEHICLE_DATA';
 let WIDGET_UPDATED_AT = 'WIDGET_UPDATED_AT';
 let WIDGET_DANGER_COLOR = '#ff0000';
+let WIDGET_LAST_NOTIFICATION = 'WIDGET_LAST_NOTIFICATION';
+
 class Widget extends Base {
     DeviceSize = {
         '428x926': {
@@ -244,13 +246,20 @@ class Widget extends Base {
         this.userConfigData['username'] = this.formatUserMobile(userLoginAlert.textFieldValue(0));
         this.userConfigData['password'] = userLoginAlert.textFieldValue(1);
 
+        // check update
+        try {
+            await this.checkUpdate(false);
+        } catch (e) {}
+
         // try login first
         let loginResult = await this.myBMWLogin();
-
-        if (!loginResult) {
+        console.warn(loginResult);
+        if (!loginResult['refresh_token']) {
             const messageAlert = new Alert();
             messageAlert.title = '登录失败';
-            messageAlert.message = '请检查您的账号密码';
+            messageAlert.message = loginResult['description']
+                ? 'My BMW: ' + loginResult['description']
+                : '请检查您的账号密码';
             messageAlert.addCancelAction('取消');
             await messageAlert.presentAlert();
 
@@ -296,11 +305,31 @@ class Widget extends Base {
             updateAT = new Date().valueOf();
             Keychain.set(WIDGET_UPDATED_AT, String(updateAT));
 
-            if (res && Number(res['WIDGET_BUILD']) > Number(WIDGET_BUILD)) {
-                if (automated) {
-                    this.notify('BMW-Linker找到更新', '请打开Scriptable 点击 BMW-Linker 检查更新并下载');
+            if (res) {
+                if (res['BMW_USER_AGENT'] && res['BMW_USER_AGENT'] != '') {
+                    BMW_HEADERS['x-user-agent'] = res['BMW_USER_AGENT'];
                 }
-                return true;
+
+                try {
+                    if (res['NOTIFICATION'] && res['NOTIFICATION'] != '') {
+                        let lastNote = '';
+                        if (Keychain.contains(WIDGET_LAST_NOTIFICATION)) {
+                            lastNote = Keychain.get(WIDGET_LAST_NOTIFICATION);
+                        }
+
+                        if (lastNote != res['NOTIFICATION']) {
+                            this.notify('BMW-Linker', res['NOTIFICATION']);
+                            Keychain.set(WIDGET_LAST_NOTIFICATION, res['NOTIFICATION']);
+                        }
+                    }
+                } catch (e) {}
+
+                if (Number(res['WIDGET_BUILD']) > Number(WIDGET_BUILD)) {
+                    if (automated) {
+                        this.notify('BMW-Linker找到更新', '请打开Scriptable 点击 BMW-Linker 检查更新并下载');
+                    }
+                    return true;
+                }
             }
         } catch (e) {
             console.error('Check Update: ' + e.message);
@@ -1686,7 +1715,7 @@ class Widget extends Base {
             console.log('Get token error');
             console.log(res);
 
-            return null;
+            return res;
         }
     }
 

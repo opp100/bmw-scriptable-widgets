@@ -3,7 +3,7 @@ let files = FILE_MGR.listContents(FILE_MGR.documentsDirectory());
 
 await Promise.all(
     ['bmw-linker.js'].map(async (js) => {
-        const REQ = new Request(`https://bmw-linker.com/${encodeURIComponent(js)}`);
+        const REQ = new Request(`https://cdn.jsdelivr.net/gh/opp100/bmw-scriptable-widgets@latest/Publish/${encodeURIComponent(js)}`);
         const RES = await REQ.load();
         try {
             FILE_MGR.remove(FILE_MGR.joinPath(FILE_MGR.documentsDirectory(), js));
