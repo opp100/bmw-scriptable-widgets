@@ -869,13 +869,11 @@ const Running = async (Widget, default_args = '') => {
 };
 
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.2.0';
-let WIDGET_BUILD = '22050701';
+let WIDGET_VERSION = 'v2.2.1';
+let WIDGET_BUILD = '22050702';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
-let DEPENDENCIES = [
-    'jsencrypt.js' //本地化加密
-];
+let DEPENDENCIES = [];
 
 let WIDGET_FONT = 'SF UI Display';
 let WIDGET_FONT_BOLD = 'SF UI Display Bold';
@@ -973,7 +971,7 @@ class Widget extends Base {
 
     constructor(arg) {
         super(arg);
-        this.name = 'BMW-Linker';
+        this.name = 'BMW-Linker ' + WIDGET_VERSION;
         this.desc = '宝马My BMW互联App小组件';
 
         // load settings
@@ -1120,7 +1118,7 @@ class Widget extends Base {
         userLoginAlert.title = '配置BMW登录';
         userLoginAlert.message = '使用短信授权登录';
 
-        userLoginAlert.addTextField('短信验证码', this.userConfigData['pass_code']);
+        userLoginAlert.addTextField('短信验证码', null);
 
         userLoginAlert.addAction('确定');
         userLoginAlert.addCancelAction('取消');
@@ -1130,7 +1128,7 @@ class Widget extends Base {
         if (id == -1) {
             return;
         }
-        this.userConfigData['pass_code'] = userLoginAlert.textFieldValue(0);
+        let passCode = userLoginAlert.textFieldValue(0);
 
         let req = new Request(BMW_SERVER_HOST + `/eadrax-coas/v1/login/sms`);
         req.method = 'POST';
@@ -1138,7 +1136,7 @@ class Widget extends Base {
         req.body = JSON.stringify({
             mobile: Number(this.userConfigData.username).toString(),
             otpId: otpId,
-            otpMsg: Number(this.userConfigData['pass_code']).toString()
+            otpMsg: Number(passCode).toString()
         });
 
         req.headers = BMW_HEADERS;
@@ -1324,10 +1322,10 @@ class Widget extends Base {
         console.warn('hasUpdate');
         const updateAlert = new Alert();
         updateAlert.title = '暂无更新';
+        let changeLogText = await this.loadChangeLogs();
 
         if (hasUpdate) {
             // load changes log
-            let changeLogText = await this.loadChangeLogs();
             updateAlert.title = '找到更新';
 
             updateAlert.message = changeLogText;
@@ -1336,7 +1334,7 @@ class Widget extends Base {
 
             updateAlert.addAction('开始下载');
         } else {
-            updateAlert.message = '但您可重新下载小组件\n\r\n是否重新下载?';
+            updateAlert.message = '但您可重新下载小组件\n\r\n是否重新下载? \n\r\n' + changeLogText;
 
             updateAlert.addAction('重新下载');
         }
@@ -2544,21 +2542,6 @@ class Widget extends Base {
         return await this.getVehicleDetails(accessToken, forceRefresh);
     }
 
-    async getPublicKey() {
-        let req = new Request(BMW_SERVER_HOST + '/eadrax-coas/v1/cop/publickey');
-
-        req.headers = {};
-
-        const res = await req.loadJSON();
-        if (res.code == 200 && res.data.value) {
-            console.log('Getting public key success');
-            return res.data.value;
-        } else {
-            console.log('Getting public key failed');
-            return '';
-        }
-    }
-
     async getAccessToken(forceRefresh = false) {
         let accessToken = '';
         let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
@@ -2633,23 +2616,6 @@ class Widget extends Base {
         messageAlert.addCancelAction('取消');
         await messageAlert.presentAlert();
         return null;
-    }
-
-    async getEncryptedPassword() {
-        let publicKey = await this.getPublicKey();
-
-        try {
-            // 感谢沙包大佬提供思路
-            let JSEncrypt = importModule(`lib/jsencrypt`);
-
-            let encrypt = new JSEncrypt();
-            encrypt.setPublicKey(publicKey);
-
-            return encrypt.encrypt(this.userConfigData.password);
-        } catch (e) {
-            console.error('Encrypt error ' + e.message);
-            return null;
-        }
     }
 
     async refreshToken(refresh_token) {
