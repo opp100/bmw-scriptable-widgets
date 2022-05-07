@@ -13,8 +13,8 @@ const {Base} = require('./「小件件」开发环境');
 
 // @组件代码开始
 let WIDGET_FILE_NAME = 'bmw-linker.js';
-let WIDGET_VERSION = 'v2.1.6';
-let WIDGET_BUILD = '22042101';
+let WIDGET_VERSION = 'v2.2.0';
+let WIDGET_BUILD = '22050701';
 let WIDGET_PREFIX = '[bmw-linker] ';
 
 let DEPENDENCIES = [
@@ -35,7 +35,7 @@ let DEFAULT_LOGO_DARK = 'https://z3.ax1x.com/2021/11/01/ICaqu6.png';
 
 // header is might be used for preventing the bmw block the external api?
 let BMW_HEADERS = {
-    'user-agent': 'Dart/2.10 (dart:io)',
+    'Content-Type': 'application/json; charset=utf-8',
     'x-user-agent': 'ios(15.4.1);bmw;2.3.0(13603)'
 };
 
@@ -229,12 +229,11 @@ class Widget extends Base {
     async userLoginCredentials() {
         const userLoginAlert = new Alert();
         userLoginAlert.title = '配置BMW登录';
-        userLoginAlert.message = '配置My BMW账号密码';
+        userLoginAlert.message = '使用短信授权登录';
 
         userLoginAlert.addTextField('账号(您的电话)', this.userConfigData['username']);
-        userLoginAlert.addSecureTextField('密码(请在MY BMW中提前设置)', this.userConfigData['password']);
 
-        userLoginAlert.addAction('确定');
+        userLoginAlert.addAction('发送短信');
         userLoginAlert.addCancelAction('取消');
 
         const id = await userLoginAlert.presentAlert();
@@ -244,7 +243,6 @@ class Widget extends Base {
         }
 
         this.userConfigData['username'] = this.formatUserMobile(userLoginAlert.textFieldValue(0));
-        this.userConfigData['password'] = userLoginAlert.textFieldValue(1);
 
         // check update
         try {
@@ -252,14 +250,51 @@ class Widget extends Base {
         } catch (e) {}
 
         // try login first
-        let loginResult = await this.myBMWLogin();
-        console.warn(loginResult);
-        if (!loginResult['refresh_token']) {
+        let otpId = await this.sendLoginSMS();
+
+        if (!otpId) {
+            return;
+        }
+
+        return this.myBMWLogin(otpId);
+    }
+
+    async myBMWLogin(otpId) {
+        const userLoginAlert = new Alert();
+        userLoginAlert.title = '配置BMW登录';
+        userLoginAlert.message = '使用短信授权登录';
+
+        userLoginAlert.addTextField('短信验证码', this.userConfigData['pass_code']);
+
+        userLoginAlert.addAction('确定');
+        userLoginAlert.addCancelAction('取消');
+
+        const id = await userLoginAlert.presentAlert();
+
+        if (id == -1) {
+            return;
+        }
+        this.userConfigData['pass_code'] = userLoginAlert.textFieldValue(0);
+
+        let req = new Request(BMW_SERVER_HOST + `/eadrax-coas/v1/login/sms`);
+        req.method = 'POST';
+
+        req.body = JSON.stringify({
+            mobile: Number(this.userConfigData.username).toString(),
+            otpId: otpId,
+            otpMsg: Number(this.userConfigData['pass_code']).toString()
+        });
+
+        req.headers = BMW_HEADERS;
+
+        let loginResult = await req.loadJSON();
+
+        if (!loginResult || loginResult.code != 200 || !loginResult['data']['refresh_token']) {
             const messageAlert = new Alert();
             messageAlert.title = '登录失败';
             messageAlert.message = loginResult['description']
                 ? 'My BMW: ' + loginResult['description']
-                : '请检查您的账号密码';
+                : '验证码过期，请重新发送短信';
             messageAlert.addCancelAction('取消');
             await messageAlert.presentAlert();
 
@@ -270,8 +305,24 @@ class Widget extends Base {
         this.settings['UserConfig'] = this.userConfigData;
         this.saveSettings(false);
 
+        console.warn(loginResult);
+
+        // store refresh token
+        Keychain.set(MY_BMW_REFRESH_TOKEN, loginResult['data']['refresh_token']);
+
         // start to get vehicle details
-        return this.getData(true);
+        let vehicle = this.getData(true);
+        if (!vehicle) {
+            return null;
+        }
+
+        const messageAlert = new Alert();
+        messageAlert.title = '登录成功';
+        messageAlert.message = '请在桌面添加小组件';
+        messageAlert.addCancelAction('确定');
+        await messageAlert.presentAlert();
+
+        return true;
     }
 
     formatUserMobile(mobileStr) {
@@ -717,7 +768,9 @@ class Widget extends Base {
         try {
             let screenSize = Device.screenResolution();
             let scale = Device.screenScale();
-            data.size = this.DeviceSize[`${screenSize.width/scale}x${screenSize.height/scale}`] || this.DeviceSize['375x812'];
+            data.size =
+                this.DeviceSize[`${screenSize.width / scale}x${screenSize.height / scale}`] ||
+                this.DeviceSize['375x812'];
         } catch (e) {
             console.warn('Display Error: ' + e.message);
             await this.renderError('显示错误：' + e.message);
@@ -1652,6 +1705,7 @@ class Widget extends Base {
 
     async getAccessToken(forceRefresh = false) {
         let accessToken = '';
+        let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
 
         if (!forceRefresh && Keychain.contains(MY_BMW_TOKEN_UPDATE_LAST_AT)) {
             let lastUpdate = parseInt(Keychain.get(MY_BMW_TOKEN_UPDATE_LAST_AT));
@@ -1661,7 +1715,6 @@ class Widget extends Base {
                 }
             } else {
                 if (Keychain.contains(MY_BMW_REFRESH_TOKEN)) {
-                    let refreshToken = Keychain.get(MY_BMW_REFRESH_TOKEN);
                     // get refresh token
                     accessToken = await this.refreshToken(refreshToken);
                 }
@@ -1672,51 +1725,58 @@ class Widget extends Base {
             return accessToken;
         }
 
-        console.log('No token found, get again');
-        const res = await this.myBMWLogin();
-
-        if (res) {
-            const {access_token, refresh_token} = res;
-
-            accessToken = access_token;
-            try {
-                Keychain.set(MY_BMW_TOKEN_UPDATE_LAST_AT, String(new Date().valueOf()));
-                Keychain.set(MY_BMW_TOKEN, access_token);
-                Keychain.set(MY_BMW_REFRESH_TOKEN, refresh_token);
-            } catch (e) {
-                console.error('Get Token: ' + e.message);
-            }
-        } else {
-            accessToken = '';
-        }
+        accessToken = await this.refreshToken(refreshToken);
 
         return accessToken;
     }
 
-    async myBMWLogin() {
-        console.log('Start to get token');
-        const _password = await this.getEncryptedPassword();
-        let req = new Request(BMW_SERVER_HOST + '/eadrax-coas/v1/login/pwd');
-
-        req.method = 'POST';
-
-        req.body = JSON.stringify({
-            mobile: this.userConfigData.username,
-            password: _password
-        });
+    async sendLoginSMS() {
+        console.log('Start to send sms');
+        let req = new Request(
+            BMW_SERVER_HOST + `/eadrax-coas/v1/cop/${this.userConfigData.username}/is-captcha-needed`
+        );
+        req.method = 'GET';
 
         req.headers = BMW_HEADERS;
 
-        console.log('trying to login');
-        const res = await req.loadJSON();
-        if (res.code == 200) {
-            return res.data;
-        } else {
-            console.log('Get token error');
-            console.log(res);
+        console.log('trying to check captcha');
+        let res = await req.loadJSON();
+        console.warn(res);
 
-            return res;
+        if (res.code !== 200) {
+            return this.loginFailedAlert();
         }
+
+        // login as SMS
+        let smsReq = new Request(BMW_SERVER_HOST + `/eadrax-coas/v1/cop/message`);
+        smsReq.method = 'POST';
+
+        smsReq.body = JSON.stringify({
+            mobile: Number(this.userConfigData.username).toString(),
+            deviceId: '12345ABCDE11'
+        });
+        console.warn(smsReq.body);
+        smsReq.headers = BMW_HEADERS;
+        console.warn(smsReq.headers);
+
+        console.log('trying to send sms to: ' + this.userConfigData.username);
+        let smsRes = await smsReq.loadJSON();
+        console.warn(smsRes);
+        if (smsRes.code !== 200 || !smsRes.data) {
+            return this.loginFailedAlert();
+        }
+
+        return smsRes.data['otpID'];
+    }
+
+    async loginFailedAlert() {
+        const messageAlert = new Alert();
+        messageAlert.title = '登录失败';
+        messageAlert.message = '请先重新在My BMW中登录一次';
+
+        messageAlert.addCancelAction('取消');
+        await messageAlert.presentAlert();
+        return null;
     }
 
     async getEncryptedPassword() {
@@ -1746,15 +1806,15 @@ class Widget extends Base {
         req.body = `grant_type=refresh_token&refresh_token=${refresh_token}`;
         const res = await req.loadJSON();
 
-        if (res.accesstoken !== undefined) {
-            const {accesstoken, refresh_token} = res;
+        if (res.access_token !== undefined) {
+            const {access_token, refresh_token} = res;
 
-            Keychain.set(MY_BMW_TOKEN, accesstoken);
+            Keychain.set(MY_BMW_TOKEN, access_token);
             Keychain.set(MY_BMW_REFRESH_TOKEN, refresh_token);
 
             Keychain.set(MY_BMW_TOKEN_UPDATE_LAST_AT, String(new Date().valueOf()));
 
-            return accesstoken;
+            return access_token;
         } else {
             return '';
         }
